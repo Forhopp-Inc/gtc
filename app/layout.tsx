@@ -9,6 +9,9 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: 'GTC Management System',
   description: 'Ghous Trading Company - Inventory & Accounting Management',
+  icons: {
+    icon: '/GTC.png',
+  },
 }
 
 export default function RootLayout({
