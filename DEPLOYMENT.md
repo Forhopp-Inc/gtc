@@ -127,47 +127,48 @@ Save and exit: Press `Ctrl+X`, then `Y`, then `Enter`
 
 ### Option A: Using External Database Only (Recommended)
 
-Edit `docker-compose.yml` to use only external database:
+Use the production Docker Compose file which is configured for external database usage:
 
 ```bash
-nano docker-compose.yml
-```
-
-**Simplified version:**
-
-```yaml
-version: '3.8'
-
-services:
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "3000:3000"
-    env_file:
-      - .env
-    restart: unless-stopped
+# Verify docker-compose.prod.yml exists
+ls docker-compose.prod.yml
 ```
 
 ### Build and Start the Application
 
 ```bash
-# Build and start in detached mode
-docker-compose up -d --build
+# Build and start in detached mode using production config
+docker-compose -f docker-compose.prod.yml up -d --build
 
 # This process will take 5-10 minutes:
 # 1. Build the Next.js application
 # 2. Install all dependencies
-# 3. Generate Prisma Client
-# 4. Start the application
+# 3. Start the application
 ```
 
-### Run Database Migrations
+### Initialize Database Schema
+
+Since this project uses raw SQL for the database schema, you need to ensure the database is initialized.
+
+If this is a **fresh database**, you can initialize it using the provided schema file.
+
+**Option 1: Using a temporary Docker container (Recommended)**
 
 ```bash
-# Wait for the build to complete, then create database tables
-docker-compose exec app npx prisma migrate deploy
+# Run a temporary postgres container to execute the schema script
+# Replace details with your actual database connection info
+docker run --rm -v $(pwd)/database/schema.sql:/schema.sql postgres:15-alpine \
+  psql "postgresql://YOUR_USERNAME:YOUR_PASSWORD@34.70.114.57:6432/gtc?sslmode=require" -f /schema.sql
+```
+
+**Option 2: Using installed PostgreSQL client**
+
+```bash
+# Install postgresql-client if not present
+sudo apt-get install -y postgresql-client
+
+# Run the schema script
+psql "postgresql://YOUR_USERNAME:YOUR_PASSWORD@34.70.114.57:6432/gtc?sslmode=require" -f database/schema.sql
 ```
 
 ### Verify Deployment
@@ -256,17 +257,8 @@ docker-compose up -d --build
 ### Database Operations
 
 ```bash
-# Run migrations
-docker-compose exec app npx prisma migrate deploy
-
-# Open Prisma Studio (database GUI)
-docker-compose exec app npx prisma studio
-
-# Check database connection
-docker-compose exec app npx prisma db pull
-
-# Generate Prisma Client
-docker-compose exec app npx prisma generate
+# Check if app can connect to DB (logs)
+docker-compose -f docker-compose.prod.yml logs app
 ```
 
 ---
@@ -286,11 +278,8 @@ cd ~/gtc
 git pull origin main
 
 # Rebuild and restart
-docker-compose down
-docker-compose up -d --build
-
-# Run any new migrations
-docker-compose exec app npx prisma migrate deploy
+docker-compose -f docker-compose.prod.yml down
+docker-compose -f docker-compose.prod.yml up -d --build
 ```
 
 ---
@@ -306,7 +295,8 @@ docker-compose exec app npx prisma migrate deploy
 3. Verify credentials in `.env` are correct
 4. Test from inside container:
    ```bash
-   docker-compose exec app npx prisma db pull
+   # You can try to ping or curl if installed, or check logs
+   docker-compose -f docker-compose.prod.yml logs app
    ```
 
 ### Application Not Starting
@@ -319,12 +309,12 @@ sudo systemctl status docker
 sudo systemctl restart docker
 
 # Check container logs for errors
-docker-compose logs app
+docker-compose -f docker-compose.prod.yml logs app
 
 # Rebuild from scratch
-docker-compose down
+docker-compose -f docker-compose.prod.yml down
 docker system prune -a
-docker-compose up -d --build
+docker-compose -f docker-compose.prod.yml up -d --build
 ```
 
 ### Port Already in Use
@@ -336,7 +326,7 @@ sudo lsof -i :3000
 # Kill the process
 sudo kill -9 PID_NUMBER
 
-# Or change port in docker-compose.yml to 8080:3000
+# Or change port in docker-compose.prod.yml to 8080:3000
 ```
 
 ---
@@ -450,10 +440,10 @@ git clone https://github.com/Forhopp-Inc/gtc.git && cd gtc
 cp .env.example .env && nano .env
 
 # 4. Deploy with Docker
-docker-compose up -d --build
+docker-compose -f docker-compose.prod.yml up -d --build
 
-# 5. Run migrations
-docker-compose exec app npx prisma migrate deploy
+# 5. Initialize DB (if fresh)
+# See "Initialize Database Schema" section above
 ```
 
 **Access at:** `http://YOUR_VM_IP:3000`

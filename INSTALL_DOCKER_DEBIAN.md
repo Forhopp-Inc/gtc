@@ -49,17 +49,17 @@ cd ~/gtc
 cp .env.example .env
 nano .env
 
-# Deploy with Docker Compose
-docker-compose up -d --build
+# Deploy with Docker Compose (Production)
+docker-compose -f docker-compose.prod.yml up -d --build
 
-# Wait 5-10 minutes for build, then run migrations
-docker-compose exec app npx prisma migrate deploy
+# Initialize Database (if needed)
+# See DEPLOYMENT.md for details on running database/schema.sql
 
 # Check if running
 docker-compose ps
 
 # View logs
-docker-compose logs -f app
+docker-compose -f docker-compose.prod.yml logs -f app
 ```
 
 ## 🌐 Access Application
