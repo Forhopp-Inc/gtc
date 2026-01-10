@@ -21,9 +21,7 @@
     "react-hook-form": "^7.49.2",
     "react-hot-toast": "^2.4.1",
     "recharts": "^2.10.3",
-    "zustand": "^4.4.7"
-  },
-  "devDependencies": {
+    "zustand": "^4.4.7",
     "@types/node": "^20.10.6",
     "@types/pg": "^8.10.9",
     "@types/react": "^18.2.46",
