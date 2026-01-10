@@ -34,12 +34,14 @@ export async function POST(request: Request) {
     const response = NextResponse.json({ message: 'Login successful' })
 
     // Set Cookie
+    const isHttps = process.env.NEXT_PUBLIC_APP_URL?.startsWith('https') || false
     response.cookies.set({
       name: 'token',
       value: token,
       httpOnly: true,
       path: '/',
-      secure: process.env.NODE_ENV === 'production',
+      secure: isHttps,
+      sameSite: 'lax',
     })
 
     return response
