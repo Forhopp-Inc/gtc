@@ -171,6 +171,11 @@ sudo apt-get install -y postgresql-client
 psql "postgresql://YOUR_USERNAME:YOUR_PASSWORD@34.70.114.57:6432/gtc?sslmode=require" -f database/schema.sql
 ```
 
+**Default Credentials:**
+After initialization, a default admin user is created:
+- **Username:** `admin`
+- **Password:** `admin123`
+
 ### Verify Deployment
 
 ```bash
@@ -183,6 +188,32 @@ docker-compose logs -f app
 # Test the application locally on VM
 curl http://localhost:3000
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Go to project directory
+cd ~/gtc
+
+# Pull the latest changes
+git pull origin main
+
+# Rebuild and restart the container
+docker-compose -f docker-compose.prod.yml up -d --build
+
 
 ---
 

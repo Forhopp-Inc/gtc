@@ -155,3 +155,8 @@ CREATE TRIGGER update_order_items_updated_at BEFORE UPDATE ON order_items FOR EA
 CREATE TRIGGER update_transactions_updated_at BEFORE UPDATE ON transactions FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 CREATE TRIGGER update_payments_updated_at BEFORE UPDATE ON payments FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 CREATE TRIGGER update_expenses_updated_at BEFORE UPDATE ON expenses FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+
+-- Initial User Seed (password: admin123)
+INSERT INTO users (name, username, password_hash)
+VALUES ('Admin User', 'admin', '$2b$10$9YvN2WYPkhxyMvgWKeHYPuuhI6XF0Rn51Rva4eW7M43YQUjqX3jEC')
+ON CONFLICT (username) DO NOTHING;
