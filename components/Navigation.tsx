@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 
 const navItems = [
   { name: 'Home', path: '/' },
@@ -15,6 +15,17 @@ const navItems = [
 
 export default function Navigation() {
   const pathname = usePathname()
+  const router = useRouter()
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+      router.push('/login')
+      router.refresh()
+    } catch (error) {
+      console.error('Logout failed', error)
+    }
+  }
 
   return (
     <nav className="bg-white shadow-md border-b border-gray-200">
@@ -27,7 +38,7 @@ export default function Navigation() {
             <span className="ml-2 text-sm text-gray-600">Management System</span>
           </div>
           
-          <div className="hidden md:flex space-x-1">
+          <div className="hidden md:flex items-center space-x-1">
             {navItems.map((item) => (
               <Link
                 key={item.path}
@@ -41,6 +52,12 @@ export default function Navigation() {
                 {item.name}
               </Link>
             ))}
+            <button
+              onClick={handleLogout}
+              className="ml-4 px-4 py-2 rounded-md text-sm font-medium text-red-600 hover:bg-red-50 transition-colors duration-200"
+            >
+              Logout
+            </button>
           </div>
 
           <div className="md:hidden">

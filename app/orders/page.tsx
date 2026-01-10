@@ -20,7 +20,6 @@ interface OrderItem {
   productId: string
   product?: Product
   quantity: number
-  buyingPrice: number
   sellingPrice: number
 }
 
@@ -49,9 +48,31 @@ export default function OrdersPage() {
   const [formData, setFormData] = useState({
     customerId: '',
     notes: '',
+    paymentStatus: 'Pending',
+    paymentMethod: 'Cash',
+    bankName: '',
+    transactionNumber: '',
+    collectedBy: '',
+    orderHandleBy: ''
   })
+
+  // Filter States
+  const [searchQuery, setSearchQuery] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [paymentFilter, setPaymentFilter] = useState('')
+
+  const collectors = [
+    "Tahir Mahmood",
+    "Nasir Mahmood", 
+    "Hammad Nasir",
+    "Hassan",
+    "Kashif Mahmood",
+    "Khaleel Ur Rehman",
+    "Huzaifa Karamat"
+  ]
   const [orderItems, setOrderItems] = useState<OrderItem[]>([
-    { productId: '', quantity: 1, buyingPrice: 0, sellingPrice: 0 }
+    { productId: '', quantity: 1, sellingPrice: 0 }
   ])
 
   useEffect(() => {
@@ -93,7 +114,7 @@ export default function OrdersPage() {
   }
 
   const addOrderItem = () => {
-    setOrderItems([...orderItems, { productId: '', quantity: 1, buyingPrice: 0, sellingPrice: 0 }])
+    setOrderItems([...orderItems, { productId: '', quantity: 1, sellingPrice: 0 }])
   }
 
   const removeOrderItem = (index: number) => {
@@ -116,18 +137,41 @@ export default function OrdersPage() {
     }
 
     try {
+      // Add default buyingPrice (0) to payload if API expects it
+      const itemsWithBuyingPrice = orderItems.map(item => ({
+        ...item,
+        buyingPrice: 0
+      }))
+
+      // Map collectedBy to transactionNumber for Cash payments
+      // And append orderHandleBy to notes
+      const payload = {
+        ...formData,
+        transactionNumber: formData.paymentMethod === 'Cash' 
+            ? formData.collectedBy 
+            : formData.transactionNumber,
+        notes: `Handled By: ${formData.orderHandleBy}. ${formData.notes}`,
+        orderItems: itemsWithBuyingPrice,
+      };
+
       const response = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          orderItems,
-        }),
+        body: JSON.stringify(payload),
       })
 
       if (response.ok) {
-        setFormData({ customerId: '', notes: '' })
-        setOrderItems([{ productId: '', quantity: 1, buyingPrice: 0, sellingPrice: 0 }])
+        setFormData({ 
+            customerId: '', 
+            notes: '', 
+            paymentStatus: 'Pending', 
+            paymentMethod: 'Cash',
+            bankName: '',
+            transactionNumber: '',
+            collectedBy: '',
+            orderHandleBy: ''
+        })
+        setOrderItems([{ productId: '', quantity: 1, sellingPrice: 0 }])
         setShowForm(false)
         fetchOrders()
         alert('Order created successfully!')
@@ -161,6 +205,44 @@ export default function OrdersPage() {
         </button>
       </div>
 
+      {/* Filters */}
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+        <input 
+          type="text" 
+          placeholder="Search by Order # or Customer..." 
+          className="input-field"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+        <div className="flex gap-2">
+          <input 
+            type="date"
+            className="input-field"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            max={new Date().toISOString().split('T')[0]}
+            title="Start Date"
+          />
+          <input 
+            type="date"
+            className="input-field"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            max={new Date().toISOString().split('T')[0]}
+            title="End Date"
+          />
+        </div>
+        <select
+          className="input-field"
+          value={paymentFilter}
+          onChange={(e) => setPaymentFilter(e.target.value)}
+        >
+          <option value="">All Payment Status</option>
+          <option value="paid">Fully Paid</option>
+          <option value="unpaid">Unpaid / Partial</option>
+        </select>
+      </div>
+
       {showForm && (
         <div className="card mb-6">
           <h2 className="text-xl font-semibold mb-4">Create New Order</h2>
@@ -182,6 +264,107 @@ export default function OrdersPage() {
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Order Handled By *
+              </label>
+              <select
+                required
+                className="input-field"
+                value={formData.orderHandleBy}
+                onChange={(e) => setFormData({ ...formData, orderHandleBy: e.target.value })}
+              >
+                <option value="">Select Person</option>
+                {collectors.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Payment Options */}
+            <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Payment Status
+                </label>
+                <select
+                  className="input-field"
+                  value={formData.paymentStatus}
+                  onChange={(e) => setFormData({ ...formData, paymentStatus: e.target.value })}
+                >
+                  <option value="Pending">From Balance</option>
+                  <option value="Done">Paid</option>
+                </select>
+              </div>
+              
+              {formData.paymentStatus === 'Done' && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Payment Method
+                    </label>
+                    <select
+                      className="input-field"
+                      value={formData.paymentMethod}
+                      onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
+                    >
+                      <option value="Cash">Cash</option>
+                      <option value="Bank">Bank Transfer</option>
+                      <option value="Cheque">Cheque</option>
+                    </select>
+                  </div>
+
+                  {formData.paymentMethod === 'Cash' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Collected By
+                      </label>
+                      <select
+                        className="input-field"
+                        value={formData.collectedBy}
+                        onChange={(e) => setFormData({ ...formData, collectedBy: e.target.value })}
+                      >
+                        <option value="">Select Collector</option>
+                        {collectors.map((name) => (
+                          <option key={name} value={name}>{name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {(formData.paymentMethod === 'Bank' || formData.paymentMethod === 'Cheque') && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Bank Name
+                        </label>
+                        <input
+                          type="text"
+                          className="input-field"
+                          value={formData.bankName}
+                          onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
+                          placeholder="e.g., HBL, Meezan"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Transaction ID / Cheque #
+                        </label>
+                        <input
+                          type="text"
+                          className="input-field"
+                          value={formData.transactionNumber}
+                          onChange={(e) => setFormData({ ...formData, transactionNumber: e.target.value })}
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
 
             <div>
@@ -225,19 +408,7 @@ export default function OrdersPage() {
                       onChange={(e) => updateOrderItem(index, 'quantity', Number(e.target.value))}
                     />
                   </div>
-                  <div className="col-span-2">
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Buying Price</label>
-                    <input
-                      type="number"
-                      required
-                      min="0"
-                      step="0.01"
-                      className="input-field text-sm"
-                      value={item.buyingPrice}
-                      onChange={(e) => updateOrderItem(index, 'buyingPrice', Number(e.target.value))}
-                    />
-                  </div>
-                  <div className="col-span-2">
+                  <div className="col-span-4">
                     <label className="block text-xs font-medium text-gray-700 mb-1">Selling Price</label>
                     <input
                       type="number"
@@ -317,8 +488,30 @@ export default function OrdersPage() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {orders.map((order) => (
-              <tr key={order.id} className="hover:bg-gray-50">
+            {orders
+              .filter(order => {
+                const matchesSearch = 
+                  order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  order.customer.name.toLowerCase().includes(searchQuery.toLowerCase());
+                
+                const orderDateStr = new Date(order.orderDate).toISOString().split('T')[0];
+                let matchesDate = true;
+                if (startDate && endDate) {
+                    matchesDate = orderDateStr >= startDate && orderDateStr <= endDate;
+                } else if (startDate) {
+                    matchesDate = orderDateStr >= startDate;
+                } else if (endDate) {
+                    matchesDate = orderDateStr <= endDate;
+                }
+                
+                let matchesPayment = true;
+                if (paymentFilter === 'paid') matchesPayment = Number(order.remainingAmount) === 0;
+                else if (paymentFilter === 'unpaid') matchesPayment = Number(order.remainingAmount) > 0;
+                
+                return matchesSearch && matchesDate && matchesPayment;
+              })
+              .map((order) => (
+              <tr key={order.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => window.location.href = `/orders/${order.id}`}>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-gray-900">{order.orderNumber}</div>
                 </td>

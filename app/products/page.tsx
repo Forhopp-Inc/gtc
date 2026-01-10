@@ -12,6 +12,7 @@ interface Product {
   name: string
   description: string | null
   category: string
+  stockQuantity: number
   company: Company
   createdAt: string
 }
@@ -27,6 +28,11 @@ export default function ProductsPage() {
     category: 'Pesticide',
     companyId: '',
   })
+
+  // Filter States
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState('')
+  const [selectedCompany, setSelectedCompany] = useState('')
 
   useEffect(() => {
     fetchProducts()
@@ -111,6 +117,34 @@ export default function ProductsPage() {
         >
           {showForm ? 'Cancel' : '+ Add Product'}
         </button>
+      </div>
+
+      {/* Filters */}
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+        <input 
+          type="text" 
+          placeholder="Search products..." 
+          className="input-field"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+        <select 
+          className="input-field"
+          value={selectedCategory}
+          onChange={(e) => setSelectedCategory(e.target.value)}
+        >
+          <option value="">All Categories</option>
+          <option value="Pesticide">Pesticide</option>
+          <option value="Fertilizer">Fertilizer</option>
+        </select>
+        <select
+          className="input-field"
+          value={selectedCompany}
+          onChange={(e) => setSelectedCompany(e.target.value)}
+        >
+          <option value="">All Companies</option>
+          {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
       </div>
 
       {showForm && (
@@ -202,16 +236,23 @@ export default function ProductsPage() {
                 Company
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Description
+                Stock Available
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Description
               </th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {products.map((product) => (
-              <tr key={product.id} className="hover:bg-gray-50">
+            {products
+              .filter(product => {
+                const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase())
+                const matchesCategory = selectedCategory ? product.category === selectedCategory : true
+                const matchesCompany = selectedCompany ? product.company.id === selectedCompany : true
+                return matchesSearch && matchesCategory && matchesCompany
+              })
+              .map((product) => (
+              <tr key={product.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => window.location.href = `/products/${product.id}`}>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-gray-900">{product.name}</div>
                 </td>
@@ -229,18 +270,13 @@ export default function ProductsPage() {
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">{product.company.name}</div>
                 </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm font-semibold text-gray-900">{product.stockQuantity || 0}</div>
+                </td>
                 <td className="px-6 py-4">
                   <div className="text-sm text-gray-500 max-w-xs truncate">
                     {product.description || '-'}
                   </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <button
-                    onClick={() => handleDelete(product.id)}
-                    className="text-red-600 hover:text-red-900"
-                  >
-                    Delete
-                  </button>
                 </td>
               </tr>
             ))}

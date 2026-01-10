@@ -29,6 +29,10 @@ export default function CustomersPage() {
     cnic: '',
   })
 
+  // Filter States
+  const [searchQuery, setSearchQuery] = useState('')
+  const [balanceFilter, setBalanceFilter] = useState('')
+
   useEffect(() => {
     fetchCustomers()
   }, [])
@@ -101,6 +105,27 @@ export default function CustomersPage() {
         >
           {showForm ? 'Cancel' : '+ Add Customer'}
         </button>
+      </div>
+
+      {/* Filters */}
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+        <input 
+          type="text" 
+          placeholder="Search by name, phone or CNIC..." 
+          className="input-field"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+        <select 
+          className="input-field"
+          value={balanceFilter}
+          onChange={(e) => setBalanceFilter(e.target.value)}
+        >
+          <option value="">All Balances</option>
+          <option value="receivable">Receivable (Udhar)</option>
+          <option value="payable">Payable (Advance/Credit)</option>
+          <option value="zero">Zero Balance</option>
+        </select>
       </div>
 
       {showForm && (
@@ -197,14 +222,26 @@ export default function CustomersPage() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Orders
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {customers.map((customer) => (
-              <tr key={customer.id} className="hover:bg-gray-50">
+            {customers
+              .filter(customer => {
+                const matchesSearch = 
+                  customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  (customer.phone && customer.phone.includes(searchQuery)) ||
+                  (customer.cnic && customer.cnic.includes(searchQuery));
+                
+                let matchesBalance = true;
+                const balance = Number(customer.balance);
+                if (balanceFilter === 'receivable') matchesBalance = balance > 0;
+                else if (balanceFilter === 'payable') matchesBalance = balance < 0;
+                else if (balanceFilter === 'zero') matchesBalance = balance === 0;
+                
+                return matchesSearch && matchesBalance;
+              })
+              .map((customer) => (
+              <tr key={customer.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => window.location.href = `/customers/${customer.id}`}>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-gray-900">{customer.name}</div>
                   {customer.cnic && (
@@ -220,22 +257,17 @@ export default function CustomersPage() {
                     className={`px-2 py-1 inline-flex text-sm leading-5 font-semibold rounded-full ${
                       Number(customer.balance) > 0
                         ? 'bg-red-100 text-red-800'
-                        : 'bg-green-100 text-green-800'
+                        : Number(customer.balance) < 0 
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-gray-100 text-gray-800'
                     }`}
                   >
-                    Rs. {Number(customer.balance).toLocaleString()}
+                    Rs. {Math.abs(Number(customer.balance)).toLocaleString()}
+                    {Number(customer.balance) < 0 && ' (Cr)'}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {customer._count?.orders || 0} orders
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <button
-                    onClick={() => handleDelete(customer.id)}
-                    className="text-red-600 hover:text-red-900"
-                  >
-                    Delete
-                  </button>
                 </td>
               </tr>
             ))}

@@ -28,7 +28,7 @@ ssh username@YOUR_VM_IP
 sudo apt update && sudo apt upgrade -y
 ```
 
-### Install Docker
+### Install Docker (Debian)
 
 ```bash
 # Remove old versions if any
@@ -41,13 +41,13 @@ sudo apt-get install -y \
     gnupg \
     lsb-release
 
-# Add Docker's official GPG key
+# Add Docker's official GPG key for Debian
 sudo mkdir -p /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
 
-# Set up Docker repository
+# Set up Docker repository for Debian
 echo \
-  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \
   $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
 # Install Docker Engine
@@ -460,4 +460,4 @@ docker-compose exec app npx prisma migrate deploy
 
 ---
 
-**Your GTC Management System is ready for production! 🎉**### 3. Using Docker Compose (Recommended)
+**Your GTC Management System is ready for production! 🎉**

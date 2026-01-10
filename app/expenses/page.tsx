@@ -13,14 +13,13 @@ interface Expense {
 }
 
 const expenseCategories = [
-  'Rent',
-  'Utilities',
-  'Salaries',
   'Transport',
-  'Maintenance',
-  'Office Supplies',
-  'Marketing',
-  'Other',
+  'Salaries',
+  'Labor',
+  'Office Items',
+  'Rent',
+  'Services',
+  'Maintainance'
 ]
 
 export default function ExpensesPage() {
@@ -34,6 +33,12 @@ export default function ExpensesPage() {
     expenseDate: new Date().toISOString().split('T')[0],
     notes: '',
   })
+
+  // Filter States
+  const [searchQuery, setSearchQuery] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
 
   useEffect(() => {
     fetchExpenses()
@@ -119,6 +124,47 @@ export default function ExpensesPage() {
         >
           {showForm ? 'Cancel' : '+ Add Expense'}
         </button>
+      </div>
+
+      {/* Filters */}
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+        <input 
+          type="text" 
+          placeholder="Search description..." 
+          className="input-field"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+        <div className="flex gap-2">
+          <input 
+            type="date"
+            className="input-field"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            max={new Date().toISOString().split('T')[0]}
+            title="Start Date"
+          />
+          <input 
+            type="date"
+            className="input-field"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            max={new Date().toISOString().split('T')[0]}
+            title="End Date"
+          />
+        </div>
+        <select
+          className="input-field"
+          value={categoryFilter}
+          onChange={(e) => setCategoryFilter(e.target.value)}
+        >
+          <option value="">All Categories</option>
+          {expenseCategories.map((cat) => (
+            <option key={cat} value={cat}>
+              {cat}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -242,7 +288,24 @@ export default function ExpensesPage() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {expenses.map((expense) => (
+            {expenses
+              .filter(expense => {
+                const matchesSearch = expense.description.toLowerCase().includes(searchQuery.toLowerCase());
+                const matchesCategory = categoryFilter ? expense.category === categoryFilter : true;
+                
+                const expenseDateStr = new Date(expense.expenseDate).toISOString().split('T')[0];
+                let matchesDate = true;
+                if (startDate && endDate) {
+                    matchesDate = expenseDateStr >= startDate && expenseDateStr <= endDate;
+                } else if (startDate) {
+                    matchesDate = expenseDateStr >= startDate;
+                } else if (endDate) {
+                    matchesDate = expenseDateStr <= endDate;
+                }
+                
+                return matchesSearch && matchesCategory && matchesDate;
+              })
+              .map((expense) => (
               <tr key={expense.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">
