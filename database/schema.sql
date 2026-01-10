@@ -67,6 +67,7 @@ CREATE TABLE IF NOT EXISTS orders (
     remaining_amount DECIMAL(12, 2) NOT NULL,
     status VARCHAR(50) DEFAULT 'Pending', -- Pending, Completed, Cancelled
     notes TEXT,
+    added_by VARCHAR(255),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -98,8 +99,10 @@ CREATE TABLE IF NOT EXISTS transactions (
     to_details JSONB,
     pr_receipt_number VARCHAR(255),
     pr_receipt_date TIMESTAMP WITH TIME ZONE,
+    invoice_number VARCHAR(255),
     description TEXT,
     notes TEXT,
+    added_by VARCHAR(255),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -113,6 +116,9 @@ CREATE TABLE IF NOT EXISTS payments (
     amount DECIMAL(12, 2) NOT NULL,
     payment_method VARCHAR(50) NOT NULL, -- Cash, Bank Transfer, Cheque
     reference_no VARCHAR(255),
+    bank_name VARCHAR(255),
+    type VARCHAR(20) DEFAULT 'credit',
+    added_by VARCHAR(255),
     notes TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP

@@ -167,9 +167,9 @@ export async function POST(request: Request) {
         let paymentNotes = 'Immediate payment for Order';
 
         await client.query(
-            `INSERT INTO payments (customer_id, order_id, payment_date, amount, payment_method, reference_no, bank_name, notes)
-             VALUES ($1, $2, CURRENT_TIMESTAMP, $3, $4, $5, $6, $7)`,
-            [customerId, orderId, totalAmount, paymentMethod, transactionNumber, bankName || null, paymentNotes]
+            `INSERT INTO payments (customer_id, order_id, payment_date, amount, payment_method, reference_no, bank_name, notes, added_by)
+             VALUES ($1, $2, CURRENT_TIMESTAMP, $3, $4, $5, $6, $7, $8)`,
+            [customerId, orderId, totalAmount, paymentMethod, transactionNumber, bankName || null, paymentNotes, addedBy]
         );
     }
 
