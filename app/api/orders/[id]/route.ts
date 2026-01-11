@@ -17,6 +17,7 @@ export async function GET(
         o.remaining_amount as "remainingAmount", 
         o.status, 
         o.notes, 
+        o.handled_by as "handledBy",
         o.created_at as "createdAt", 
         o.updated_at as "updatedAt",
         json_build_object(
