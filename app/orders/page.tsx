@@ -144,13 +144,13 @@ export default function OrdersPage() {
       }))
 
       // Map collectedBy to transactionNumber for Cash payments
-      // And append orderHandleBy to notes
       const payload = {
         ...formData,
+        handledBy: formData.orderHandleBy,
         transactionNumber: formData.paymentMethod === 'Cash' 
             ? formData.collectedBy 
             : formData.transactionNumber,
-        notes: `Handled By: ${formData.orderHandleBy}. ${formData.notes}`,
+        notes: formData.notes,
         orderItems: itemsWithBuyingPrice,
       };
 

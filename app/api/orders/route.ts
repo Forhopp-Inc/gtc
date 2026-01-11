@@ -109,7 +109,7 @@ export async function POST(request: Request) {
     const addedBy = payload?.name || 'System'
 
     const body = await request.json()
-    const { customerId, orderItems, notes, paymentStatus, paymentMethod, bankName, transactionNumber } = body
+    const { customerId, orderItems, notes, paymentStatus, paymentMethod, bankName, transactionNumber, handledBy } = body
 
     await client.query('BEGIN');
 
@@ -123,10 +123,10 @@ export async function POST(request: Request) {
 
     // Create order (initial amounts 0, updated later)
     const orderResult = await client.query(
-        `INSERT INTO orders (order_number, customer_id, total_amount, paid_amount, remaining_amount, status, notes, added_by)
-         VALUES ($1, $2, 0, 0, 0, $3, $4, $5)
+        `INSERT INTO orders (order_number, customer_id, total_amount, paid_amount, remaining_amount, status, notes, added_by, handled_by)
+         VALUES ($1, $2, 0, 0, 0, $3, $4, $5, $6)
          RETURNING id`,
-        [orderNumber, customerId, status, notes, addedBy]
+        [orderNumber, customerId, status, notes, addedBy, handledBy]
     );
     const orderId = orderResult.rows[0].id;
 

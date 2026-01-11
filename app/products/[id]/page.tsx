@@ -11,6 +11,7 @@ interface Product {
   description: string
   category: string
   stockQuantity: number
+  price: string | number
   companyId: string
   createdAt: string
   updatedAt: string
@@ -206,10 +207,14 @@ export default function ProductDetailsPage() {
         {/* Details Card */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Product Details</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-500">Description</label>
                     <p className="mt-1 text-gray-900">{product.description || 'No description provided'}</p>
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-500">Current Buying Price</label>
+                    <p className="mt-1 text-gray-900 font-medium">PKR {product.price ? parseFloat(product.price.toString()).toLocaleString() : '0'}</p>
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-gray-500">Added On</label>

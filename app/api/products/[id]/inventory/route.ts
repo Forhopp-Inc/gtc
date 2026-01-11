@@ -51,17 +51,31 @@ export async function POST(
         balanceDescription = `${cost.toLocaleString()} pending`;
     }
     
-    // Fetch product name for better description
-    const productResult = await db.query('SELECT name FROM products WHERE id = $1', [params.id]);
-    const productName = productResult.rows[0]?.name || 'Product';
+    // Fetch product details for calculation and description
+    const productResult = await db.query('SELECT name, stock_quantity, price FROM products WHERE id = $1', [params.id]);
+    const product = productResult.rows[0];
+    const productName = product?.name || 'Product';
+
+    // Calculate Weighted Average Price
+    const currentStock = parseFloat(product?.stock_quantity || '0');
+    const currentPrice = parseFloat(product?.price || '0');
+    const newStock = parseFloat(stockToAdd);
+    const newBuyingPrice = parseFloat(buyingPrice);
+    
+    let updatedPrice = newBuyingPrice;
+    if (currentStock > 0) {
+        const totalValue = (currentStock * currentPrice) + (newStock * newBuyingPrice);
+        const totalStock = currentStock + newStock;
+        updatedPrice = totalValue / totalStock;
+    }
 
     const description = `Inventory Purchase: ${stockToAdd} units of ${productName} at ${buyingPrice}/unit. ${balanceDescription}`;
     const notes = `Invoice #: ${invoiceNumber}`;
 
-    // 2. Update Product Stock
+    // 2. Update Product Stock and Price
     await db.query(
-        `UPDATE products SET stock_quantity = stock_quantity + $1 WHERE id = $2`,
-        [stockToAdd, params.id]
+        `UPDATE products SET stock_quantity = stock_quantity + $1, price = $3 WHERE id = $2`,
+        [stockToAdd, params.id, updatedPrice]
     );
 
     // 3. Create Purchase Transaction
