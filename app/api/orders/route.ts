@@ -150,6 +150,12 @@ export async function POST(request: Request) {
             [orderId, item.productId, itemQuantity, itemBuyingPrice, itemSellingPrice, itemTotalCost, itemTotalRevenue, itemProfit]
         );
 
+        // Deduct from inventory
+        await client.query(
+            `UPDATE products SET stock_quantity = stock_quantity - $1 WHERE id = $2`,
+            [itemQuantity, item.productId]
+        );
+
         totalAmount += itemTotalRevenue;
         totalCost += itemTotalCost;
         totalProfit += itemProfit;
