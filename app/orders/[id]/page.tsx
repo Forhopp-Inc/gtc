@@ -59,6 +59,11 @@ export default function OrderDetailsPage() {
   const router = useRouter()
   const [order, setOrder] = useState<Order | null>(null)
   const [loading, setLoading] = useState(true)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editForm, setEditForm] = useState({
+    status: '',
+    notes: ''
+  })
 
   useEffect(() => {
     fetchOrderDetails()
@@ -70,10 +75,34 @@ export default function OrderDetailsPage() {
       if (!response.ok) throw new Error('Failed to fetch order')
       const data = await response.json()
       setOrder(data)
+      setEditForm({
+        status: data.status,
+        notes: data.notes || ''
+      })
     } catch (error) {
       console.error('Error:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleEditOrder = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!order) return
+
+    try {
+      const response = await fetch(`/api/orders/${order.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm)
+      })
+
+      if (response.ok) {
+        setShowEditModal(false)
+        fetchOrderDetails()
+      }
+    } catch (error) {
+      console.error('Error updating order:', error)
     }
   }
 
@@ -99,6 +128,13 @@ export default function OrderDetailsPage() {
                 Back
             </button>
             <div className="flex gap-3">
+                <button 
+                    onClick={() => setShowEditModal(true)}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 shadow-sm text-sm font-medium flex items-center"
+                >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                    Edit Order
+                </button>
                 <button 
                     onClick={handlePrint}
                     className="bg-gray-800 text-white px-4 py-2 rounded-md hover:bg-gray-900 shadow-sm text-sm font-medium flex items-center"
@@ -219,6 +255,65 @@ export default function OrderDetailsPage() {
             </div>
         </div>
       </div>
+
+      {/* Edit Order Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+            <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={() => setShowEditModal(false)}></div>
+                <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                    <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                        <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4" id="modal-title">
+                            Edit Order Details
+                        </h3>
+                        <form onSubmit={handleEditOrder} id="edit-form" className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Status
+                                </label>
+                                <select
+                                    className="input-field"
+                                    value={editForm.status}
+                                    onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                                >
+                                    <option value="Pending">Pending</option>
+                                    <option value="Completed">Completed</option>
+                                    <option value="Cancelled">Cancelled</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Notes
+                                </label>
+                                <textarea
+                                    className="input-field"
+                                    rows={4}
+                                    value={editForm.notes}
+                                    onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                                />
+                            </div>
+                        </form>
+                    </div>
+                    <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                        <button
+                            type="submit"
+                            form="edit-form"
+                            className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
+                        >
+                            Save Changes
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setShowEditModal(false)}
+                            className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+      )}
     </div>
   )
 }

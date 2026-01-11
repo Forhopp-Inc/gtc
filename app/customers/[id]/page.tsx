@@ -59,6 +59,14 @@ export default function CustomerDetailsPage() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'orders' | 'payments'>('orders')
   const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editForm, setEditForm] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    address: '',
+    cnic: ''
+  })
   const [paymentForm, setPaymentForm] = useState({
     amount: '',
     paymentDate: new Date().toISOString().split('T')[0],
@@ -92,10 +100,37 @@ export default function CustomerDetailsPage() {
       if (!response.ok) throw new Error('Failed to fetch customer')
       const data = await response.json()
       setCustomer(data)
+      setEditForm({
+        name: data.name,
+        phone: data.phone || '',
+        email: data.email || '',
+        address: data.address || '',
+        cnic: data.cnic || ''
+      })
     } catch (error) {
       console.error('Error:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleEditCustomer = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!customer) return
+
+    try {
+      const response = await fetch(`/api/customers/${customer.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm)
+      })
+
+      if (response.ok) {
+        setShowEditModal(false)
+        fetchCustomerDetails()
+      }
+    } catch (error) {
+      console.error('Error updating customer:', error)
     }
   }
 
@@ -195,6 +230,13 @@ export default function CustomerDetailsPage() {
                 </p>
             </div>
                 <div className="flex gap-2">
+                    <button
+                        onClick={() => setShowEditModal(true)}
+                        className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg shadow-sm transition-all text-sm font-medium w-full md:w-auto"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                        Edit Details
+                    </button>
                     <button
                         onClick={() => {
                             setPaymentForm(prev => ({ ...prev, type: 'debit', amount: '', notes: '', referenceNo: '', bankName: '', collectedBy: '', amountGiver: '', receivedBy: '' }))
@@ -504,6 +546,96 @@ export default function CustomerDetailsPage() {
                         <button
                             type="button"
                             onClick={() => setShowPaymentModal(false)}
+                            className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+      )}
+
+      {/* Edit Customer Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+            <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={() => setShowEditModal(false)}></div>
+                <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                    <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                        <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4" id="modal-title">
+                            Edit Customer Details
+                        </h3>
+                        <form onSubmit={handleEditCustomer} id="edit-form" className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Customer Name *
+                                </label>
+                                <input
+                                    type="text"
+                                    required
+                                    className="input-field"
+                                    value={editForm.name}
+                                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Phone
+                                </label>
+                                <input
+                                    type="text"
+                                    className="input-field"
+                                    value={editForm.phone}
+                                    onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Email
+                                </label>
+                                <input
+                                    type="email"
+                                    className="input-field"
+                                    value={editForm.email}
+                                    onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    CNIC
+                                </label>
+                                <input
+                                    type="text"
+                                    className="input-field"
+                                    value={editForm.cnic}
+                                    onChange={(e) => setEditForm({ ...editForm, cnic: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Address
+                                </label>
+                                <textarea
+                                    className="input-field"
+                                    rows={3}
+                                    value={editForm.address}
+                                    onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                                />
+                            </div>
+                        </form>
+                    </div>
+                    <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                        <button
+                            type="submit"
+                            form="edit-form"
+                            className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
+                        >
+                            Save Changes
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setShowEditModal(false)}
                             className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
                         >
                             Cancel

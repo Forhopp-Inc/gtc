@@ -41,13 +41,7 @@ export default function LoginPage() {
       <div className="max-w-md w-full space-y-8">
         <div>
           <div className="flex justify-center">
-             <Image
-                src="/GTC.png"
-                alt="GTC Logo"
-                width={100}
-                height={100}
-                className="mb-4"
-              />
+            <h1 className="text-4xl font-bold text-blue-600 mb-4">GTC</h1>
           </div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
             Sign in to GTC Management

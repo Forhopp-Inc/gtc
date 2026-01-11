@@ -26,6 +26,7 @@ export default function ExpensesPage() {
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
   const [formData, setFormData] = useState({
     category: 'Other',
     description: '',
@@ -59,8 +60,11 @@ export default function ExpensesPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      const response = await fetch('/api/expenses', {
-        method: 'POST',
+      const url = editingExpense ? `/api/expenses/${editingExpense.id}` : '/api/expenses'
+      const method = editingExpense ? 'PUT' : 'POST'
+
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
@@ -78,11 +82,24 @@ export default function ExpensesPage() {
           notes: '',
         })
         setShowForm(false)
+        setEditingExpense(null)
         fetchExpenses()
       }
     } catch (error) {
-      console.error('Failed to create expense:', error)
+      console.error('Failed to save expense:', error)
     }
+  }
+
+  const handleEdit = (expense: Expense) => {
+    setEditingExpense(expense)
+    setFormData({
+      category: expense.category,
+      description: expense.description,
+      amount: expense.amount,
+      expenseDate: new Date(expense.expenseDate).toISOString().split('T')[0],
+      notes: expense.notes || '',
+    })
+    setShowForm(true)
   }
 
   const handleDelete = async (id: string) => {
@@ -119,7 +136,21 @@ export default function ExpensesPage() {
           <p className="text-gray-600 mt-2">Track business expenses</p>
         </div>
         <button
-          onClick={() => setShowForm(!showForm)}
+          onClick={() => {
+            if (showForm) {
+                setShowForm(false)
+                setEditingExpense(null)
+                setFormData({
+                  category: 'Other',
+                  description: '',
+                  amount: '',
+                  expenseDate: new Date().toISOString().split('T')[0],
+                  notes: '',
+                })
+            } else {
+                setShowForm(true)
+            }
+          }}
           className="btn-primary"
         >
           {showForm ? 'Cancel' : '+ Add Expense'}
@@ -180,7 +211,7 @@ export default function ExpensesPage() {
 
       {showForm && (
         <div className="card mb-6">
-          <h2 className="text-xl font-semibold mb-4">Add New Expense</h2>
+          <h2 className="text-xl font-semibold mb-4">{editingExpense ? 'Edit Expense' : 'Add New Expense'}</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -252,11 +283,21 @@ export default function ExpensesPage() {
             </div>
             <div className="flex gap-2">
               <button type="submit" className="btn-primary">
-                Create Expense
+                {editingExpense ? 'Update Expense' : 'Create Expense'}
               </button>
               <button
                 type="button"
-                onClick={() => setShowForm(false)}
+                onClick={() => {
+                    setShowForm(false)
+                    setEditingExpense(null)
+                    setFormData({
+                      category: 'Other',
+                      description: '',
+                      amount: '',
+                      expenseDate: new Date().toISOString().split('T')[0],
+                      notes: '',
+                    })
+                }}
                 className="btn-secondary"
               >
                 Cancel
@@ -329,6 +370,12 @@ export default function ExpensesPage() {
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <button
+                    onClick={() => handleEdit(expense)}
+                    className="text-blue-600 hover:text-blue-900 mr-4"
+                  >
+                    Edit
+                  </button>
                   <button
                     onClick={() => handleDelete(expense.id)}
                     className="text-red-600 hover:text-red-900"

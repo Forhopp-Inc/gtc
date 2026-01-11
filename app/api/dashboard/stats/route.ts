@@ -1,9 +1,31 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    // 1. Get counts and debt
+    const { searchParams } = new URL(request.url);
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
+
+    let dateFilter = '';
+    const params = [];
+    if (startDate && endDate) {
+        dateFilter = `WHERE created_at BETWEEN $1 AND $2`;
+        params.push(startDate, endDate);
+    } else if (startDate) {
+        dateFilter = `WHERE created_at >= $1`;
+        params.push(startDate);
+    } else if (endDate) {
+        dateFilter = `WHERE created_at <= $1`;
+        params.push(endDate);
+    }
+    
+    // For specific tables where date column name differs
+    const orderDateFilter = dateFilter.replace('created_at', 'order_date');
+    const expenseDateFilter = dateFilter.replace('created_at', 'expense_date');
+
+    // 1. Get counts and debt (Overall counts usually remain total, but financial stats can be ranged)
+    // We'll keep total counts as overall system stats, but add ranged financial stats
     const countsResult = await db.query(`
         SELECT 
             (SELECT COUNT(*) FROM companies) as "totalCompanies",
@@ -16,7 +38,21 @@ export async function GET() {
     `);
     const counts = countsResult.rows[0];
 
-    // 2. Get recent orders
+    // Ranged Stats
+    const rangedStatsResult = await db.query(`
+        SELECT
+            (SELECT COALESCE(SUM(total_amount), 0) FROM orders ${orderDateFilter}) as "totalRevenue",
+            (SELECT COALESCE(SUM(total_cost), 0) FROM order_items WHERE order_id IN (SELECT id FROM orders ${orderDateFilter})) as "totalCost",
+            (SELECT COALESCE(SUM(amount), 0) FROM expenses ${expenseDateFilter}) as "totalExpenses"
+    `, params);
+    const rangedStats = rangedStatsResult.rows[0];
+    
+    const totalRevenue = parseFloat(rangedStats.totalRevenue);
+    const totalCost = parseFloat(rangedStats.totalCost);
+    const totalExpenses = parseFloat(rangedStats.totalExpenses);
+    const netProfit = totalRevenue - totalCost - totalExpenses;
+
+    // 2. Get recent orders (Filtered by date if provided, else limit 10)
     const recentOrdersResult = await db.query(`
       SELECT 
         o.id, 
@@ -32,49 +68,18 @@ export async function GET() {
         o.updated_at as "updatedAt",
         json_build_object(
             'id', c.id, 
-            'name', c.name, 
-            'phone', c.phone, 
-            'email', c.email, 
-            'address', c.address, 
-            'cnic', c.cnic, 
-            'balance', c.balance, 
-            'createdAt', c.created_at, 
-            'updatedAt', c.updated_at
-        ) as customer,
-        COALESCE(
-          (SELECT json_agg(json_build_object(
-            'id', oi.id,
-            'orderId', oi.order_id,
-            'productId', oi.product_id,
-            'quantity', oi.quantity,
-            'buyingPrice', oi.buying_price,
-            'sellingPrice', oi.selling_price,
-            'totalCost', oi.total_cost,
-            'totalRevenue', oi.total_revenue,
-            'profit', oi.profit,
-            'createdAt', oi.created_at,
-            'updatedAt', oi.updated_at,
-            'product', json_build_object(
-                'id', p.id,
-                'name', p.name,
-                'description', p.description,
-                'category', p.category,
-                'companyId', p.company_id,
-                'createdAt', p.created_at,
-                'updatedAt', p.updated_at
-            )
-          )) FROM order_items oi 
-          JOIN products p ON oi.product_id = p.id
-          WHERE oi.order_id = o.id),
-          '[]'::json
-        ) as "orderItems"
+            'name', c.name
+        ) as customer
       FROM orders o
       JOIN customers c ON o.customer_id = c.id
+      ${orderDateFilter}
       ORDER BY o.order_date DESC
-      LIMIT 5
-    `);
+      LIMIT 10
+    `, params);
 
-    // 3. Monthly revenue
+    // 3. Monthly revenue (Keep 6 months trend, maybe separate chart, or filter if range is large)
+    // For now, let's keep the standard 6 months trend regardless of filter, or adapt if needed.
+    // Business robust reports usually want the trend.
     const monthlyRevenueResult = await db.query(`
         SELECT 
             to_char(order_date, 'YYYY-MM') as month, 
@@ -86,32 +91,26 @@ export async function GET() {
         ORDER BY 1
     `);
 
-    // 4. Top products
+    // 4. Top products (Filtered)
     const topProductsResult = await db.query(`
        SELECT 
          json_build_object(
             'id', p.id,
             'name', p.name,
-            'description', p.description,
-            'category', p.category,
-            'companyId', p.company_id,
-            'createdAt', p.created_at,
-            'updatedAt', p.updated_at,
-            'company', json_build_object(
-                'id', c.id, 'name', c.name, 'contactInfo', c.contact_info, 'address', c.address, 'officerId', c.officer_id, 'createdAt', c.created_at, 'updatedAt', c.updated_at
-            )
+            'company', json_build_object('name', c.name)
          ) as product,
          SUM(oi.quantity) as "totalQuantity",
          SUM(oi.total_revenue) as "totalRevenue"
        FROM order_items oi
        JOIN products p ON oi.product_id = p.id
        JOIN companies c ON p.company_id = c.id
-       GROUP BY p.id, c.id, p.name, p.description, p.category, p.company_id, p.created_at, p.updated_at, c.name, c.contact_info, c.address, c.officer_id, c.created_at, c.updated_at
+       WHERE oi.order_id IN (SELECT id FROM orders ${orderDateFilter})
+       GROUP BY p.id, p.name, c.name
        ORDER BY "totalQuantity" DESC
-       LIMIT 5
-    `);
+       LIMIT 10
+    `, params);
 
-    // 5. Recent expenses
+    // 5. Recent expenses (Filtered)
     const recentExpensesResult = await db.query(`
         SELECT 
             id, 
@@ -119,13 +118,12 @@ export async function GET() {
             description, 
             amount, 
             expense_date as "expenseDate", 
-            notes, 
-            created_at as "createdAt", 
-            updated_at as "updatedAt"
+            notes
         FROM expenses
+        ${expenseDateFilter}
         ORDER BY expense_date DESC
-        LIMIT 5
-    `);
+        LIMIT 10
+    `, params);
 
     return NextResponse.json({
       counts: {
@@ -138,6 +136,10 @@ export async function GET() {
       },
       financial: {
         totalCustomerDebt: parseFloat(counts.totalCustomerDebt),
+        totalRevenue,
+        totalCost,
+        totalExpenses,
+        netProfit
       },
       recentOrders: recentOrdersResult.rows,
       monthlyRevenue: monthlyRevenueResult.rows,
