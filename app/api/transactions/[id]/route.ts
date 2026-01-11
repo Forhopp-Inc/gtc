@@ -67,6 +67,7 @@ export async function PUT(
     if (body.toDetails !== undefined) { fields.push(`to_details = $${idx++}`); values.push(body.toDetails); }
     if (body.prReceiptNumber !== undefined) { fields.push(`pr_receipt_number = $${idx++}`); values.push(body.prReceiptNumber); }
     if (body.prReceiptDate !== undefined) { fields.push(`pr_receipt_date = $${idx++}`); values.push(body.prReceiptDate); }
+    if (body.invoiceNumber !== undefined) { fields.push(`invoice_number = $${idx++}`); values.push(body.invoiceNumber); }
     if (body.description !== undefined) { fields.push(`description = $${idx++}`); values.push(body.description); }
     if (body.notes !== undefined) { fields.push(`notes = $${idx++}`); values.push(body.notes); }
 

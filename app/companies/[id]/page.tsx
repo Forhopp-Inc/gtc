@@ -39,6 +39,12 @@ interface Product {
   companyId: string
   createdAt: string
   updatedAt: string
+  lastPurchase?: {
+    id: string
+    date: string
+    amount: string
+    invoiceNumber: string
+  }
 }
 
 interface Company {
@@ -332,6 +338,7 @@ export default function CompanyDetailsPage() {
                         <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Category</th>
                         <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Stock Quantity</th>
                         <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Added On</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Last Purchase</th>
                     </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
@@ -350,6 +357,16 @@ export default function CompanyDetailsPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {format(new Date(product.createdAt), 'MMM d, yyyy')}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {product.lastPurchase ? (
+                                <div>
+                                    <p className="text-gray-900 font-medium">PKR {parseFloat(product.lastPurchase.amount).toLocaleString()}</p>
+                                    <p className="text-xs text-gray-500">{format(new Date(product.lastPurchase.date), 'MMM d, yyyy')}</p>
+                                </div>
+                            ) : (
+                                <span className="text-gray-400">-</span>
+                            )}
                         </td>
                         </tr>
                     ))}

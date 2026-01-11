@@ -34,7 +34,21 @@ export async function GET(
             'stockQuantity', p.stock_quantity,
             'companyId', p.company_id,
             'createdAt', p.created_at,
-            'updatedAt', p.updated_at
+            'updatedAt', p.updated_at,
+            'lastPurchase', (
+                SELECT json_build_object(
+                    'id', t.id,
+                    'date', t.transaction_date,
+                    'amount', t.amount,
+                    'invoiceNumber', t.invoice_number
+                )
+                FROM transactions t
+                WHERE t.company_id = c.id 
+                AND t.type = 'Purchase' 
+                AND t.description ILIKE '%' || p.name || '%'
+                ORDER BY t.transaction_date DESC
+                LIMIT 1
+            )
           )) FROM products p WHERE p.company_id = c.id),
           '[]'::json
         ) as products,
