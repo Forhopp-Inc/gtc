@@ -8,6 +8,7 @@ const navItems = [
   { name: 'Companies', path: '/companies' },
   { name: 'Products', path: '/products' },
   { name: 'Customers', path: '/customers' },
+  { name: 'Investors', path: '/investors' },
   { name: 'Orders', path: '/orders' },
   { name: 'Expenses', path: '/expenses' },
   { name: 'Reports', path: '/reports' },
