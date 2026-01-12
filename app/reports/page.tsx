@@ -19,6 +19,18 @@ interface DashboardStats {
     totalExpenses: number
     netProfit: number
   }
+  cashFlow: {
+    totalCashIn: number
+    totalCashOut: number
+    netCashFlow: number
+    breakdown: {
+        customerPayments: number
+        investorInvestments: number
+        expenses: number
+        investorWithdrawals: number
+        customerWithdrawals: number
+    }
+  }
   recentOrders: Array<{
     id: string
     orderNumber: string
@@ -83,6 +95,10 @@ export default function ReportsPage() {
     let end = new Date()
 
     switch (preset) {
+        case 'today':
+            start = today
+            end = today
+            break
         case 'thisMonth':
             start = startOfMonth(today)
             end = endOfMonth(today)
@@ -141,6 +157,7 @@ export default function ReportsPage() {
                 </div>
             </div>
             <div className="flex gap-2">
+                <button onClick={() => handleDatePreset('today')} className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded">Today</button>
                 <button onClick={() => handleDatePreset('thisMonth')} className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded">This Month</button>
                 <button onClick={() => handleDatePreset('lastMonth')} className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded">Last Month</button>
             </div>
@@ -183,8 +200,8 @@ export default function ReportsPage() {
 
       {/* Tabs */}
       <div className="border-b border-gray-200 mb-6">
-        <nav className="-mb-px flex space-x-8">
-          {['overview', 'sales', 'inventory', 'financial'].map((tab) => (
+        <nav className="-mb-px flex space-x-8 overflow-x-auto">
+          {['overview', 'cash-flow', 'sales', 'inventory', 'financial'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -194,7 +211,7 @@ export default function ReportsPage() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm capitalize transition-colors`}
             >
-              {tab}
+              {tab.replace('-', ' ')}
             </button>
           ))}
         </nav>
@@ -289,6 +306,61 @@ export default function ReportsPage() {
                 </table>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Cash Flow Tab */}
+      {stats && activeTab === 'cash-flow' && (
+        <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="card border-l-4 border-green-500">
+                    <h3 className="text-sm font-medium text-gray-500 mb-1">Total Cash In</h3>
+                    <p className="text-2xl font-bold text-green-600">Rs. {stats.cashFlow.totalCashIn.toLocaleString()}</p>
+                    <div className="mt-4 pt-4 border-t border-gray-100">
+                        <div className="flex justify-between text-sm py-1">
+                            <span className="text-gray-600">Customer Payments</span>
+                            <span className="font-medium">Rs. {stats.cashFlow.breakdown.customerPayments.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between text-sm py-1">
+                            <span className="text-gray-600">Investor Investments</span>
+                            <span className="font-medium">Rs. {stats.cashFlow.breakdown.investorInvestments.toLocaleString()}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="card border-l-4 border-red-500">
+                    <h3 className="text-sm font-medium text-gray-500 mb-1">Total Cash Out</h3>
+                    <p className="text-2xl font-bold text-red-600">Rs. {stats.cashFlow.totalCashOut.toLocaleString()}</p>
+                    <div className="mt-4 pt-4 border-t border-gray-100">
+                        <div className="flex justify-between text-sm py-1">
+                            <span className="text-gray-600">Expenses</span>
+                            <span className="font-medium">Rs. {stats.cashFlow.breakdown.expenses.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between text-sm py-1">
+                            <span className="text-gray-600">Investor Withdrawals</span>
+                            <span className="font-medium">Rs. {stats.cashFlow.breakdown.investorWithdrawals.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between text-sm py-1">
+                            <span className="text-gray-600">Customer Withdrawals</span>
+                            <span className="font-medium">Rs. {stats.cashFlow.breakdown.customerWithdrawals.toLocaleString()}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className={`card border-l-4 ${stats.cashFlow.netCashFlow >= 0 ? 'border-blue-500' : 'border-orange-500'}`}>
+                    <h3 className="text-sm font-medium text-gray-500 mb-1">Net Cash Flow</h3>
+                    <p className={`text-2xl font-bold ${stats.cashFlow.netCashFlow >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
+                        {stats.cashFlow.netCashFlow >= 0 ? '+' : ''} Rs. {stats.cashFlow.netCashFlow.toLocaleString()}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">Cash In - Cash Out</p>
+                </div>
+            </div>
+            
+            <div className="card">
+                <p className="text-sm text-gray-500 text-center">
+                    Note: Cash Flow analysis is based on actual payments and transactions recorded within the selected date range.
+                </p>
+            </div>
         </div>
       )}
 

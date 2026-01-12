@@ -8,7 +8,7 @@ export async function GET(request: Request) {
     const endDate = searchParams.get('endDate');
 
     let dateFilter = '';
-    const params = [];
+    const params: any[] = [];
     if (startDate && endDate) {
         dateFilter = `WHERE created_at BETWEEN $1 AND $2`;
         params.push(startDate, endDate);
@@ -23,9 +23,10 @@ export async function GET(request: Request) {
     // For specific tables where date column name differs
     const orderDateFilter = dateFilter.replace('created_at', 'order_date');
     const expenseDateFilter = dateFilter.replace('created_at', 'expense_date');
+    const paymentDateFilter = dateFilter.replace('created_at', 'payment_date');
+    const transactionDateFilter = dateFilter.replace('created_at', 'transaction_date');
 
     // 1. Get counts and debt (Overall counts usually remain total, but financial stats can be ranged)
-    // We'll keep total counts as overall system stats, but add ranged financial stats
     const countsResult = await db.query(`
         SELECT 
             (SELECT COUNT(*) FROM companies) as "totalCompanies",
@@ -52,6 +53,29 @@ export async function GET(request: Request) {
     const totalExpenses = parseFloat(rangedStats.totalExpenses);
     const netProfit = totalRevenue - totalCost - totalExpenses;
 
+    // Cash Flow Stats
+    // Re-using params since they are the same [startDate, endDate]
+    const cashFlowResult = await db.query(`
+        SELECT
+            (SELECT COALESCE(SUM(amount), 0) FROM payments ${paymentDateFilter} AND type = 'credit') as "customerPayments",
+            (SELECT COALESCE(SUM(amount), 0) FROM payments ${paymentDateFilter} AND type = 'debit') as "customerWithdrawals",
+            (SELECT COALESCE(SUM(amount), 0) FROM investor_transactions ${transactionDateFilter} AND type = 'Investment') as "investorInvestments",
+            (SELECT COALESCE(SUM(amount), 0) FROM investor_transactions ${transactionDateFilter} AND type = 'Withdrawal') as "investorWithdrawals",
+            (SELECT COALESCE(SUM(amount), 0) FROM expenses ${expenseDateFilter}) as "expenses"
+    `, params);
+    const cashStats = cashFlowResult.rows[0];
+
+    const customerPayments = parseFloat(cashStats.customerPayments);
+    const investorInvestments = parseFloat(cashStats.investorInvestments);
+    const customerWithdrawals = parseFloat(cashStats.customerWithdrawals);
+    const investorWithdrawals = parseFloat(cashStats.investorWithdrawals);
+    const expenses = parseFloat(cashStats.expenses);
+
+    const totalCashIn = customerPayments + investorInvestments;
+    const totalCashOut = expenses + investorWithdrawals + customerWithdrawals;
+    const netCashFlow = totalCashIn - totalCashOut;
+
+
     // 2. Get recent orders (Filtered by date if provided, else limit 10)
     const recentOrdersResult = await db.query(`
       SELECT 
@@ -77,9 +101,7 @@ export async function GET(request: Request) {
       LIMIT 10
     `, params);
 
-    // 3. Monthly revenue (Keep 6 months trend, maybe separate chart, or filter if range is large)
-    // For now, let's keep the standard 6 months trend regardless of filter, or adapt if needed.
-    // Business robust reports usually want the trend.
+    // 3. Monthly revenue
     const monthlyRevenueResult = await db.query(`
         SELECT 
             to_char(order_date, 'YYYY-MM') as month, 
@@ -140,6 +162,18 @@ export async function GET(request: Request) {
         totalCost,
         totalExpenses,
         netProfit
+      },
+      cashFlow: {
+        totalCashIn,
+        totalCashOut,
+        netCashFlow,
+        breakdown: {
+            customerPayments,
+            investorInvestments,
+            expenses,
+            investorWithdrawals,
+            customerWithdrawals
+        }
       },
       recentOrders: recentOrdersResult.rows,
       monthlyRevenue: monthlyRevenueResult.rows,
