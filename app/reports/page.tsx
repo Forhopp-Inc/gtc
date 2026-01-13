@@ -18,6 +18,7 @@ interface DashboardStats {
     totalCost: number
     totalExpenses: number
     netProfit: number
+    inventoryValue: number
   }
   cashFlow: {
     totalCashIn: number
@@ -430,7 +431,7 @@ export default function ReportsPage() {
       {/* Inventory Tab */}
       {stats && activeTab === 'inventory' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="card bg-blue-50 border-blue-200 text-center py-8">
                 <p className="text-sm text-gray-600 font-medium uppercase tracking-wider">Total Companies</p>
                 <p className="text-4xl font-bold text-blue-600 mt-2">{stats.counts.totalCompanies}</p>
@@ -438,6 +439,11 @@ export default function ReportsPage() {
               <div className="card bg-green-50 border-green-200 text-center py-8">
                 <p className="text-sm text-gray-600 font-medium uppercase tracking-wider">Total Products</p>
                 <p className="text-4xl font-bold text-green-600 mt-2">{stats.counts.totalProducts}</p>
+              </div>
+              <div className="card bg-purple-50 border-purple-200 text-center py-8">
+                <p className="text-sm text-gray-600 font-medium uppercase tracking-wider">Total Inventory Value</p>
+                <p className="text-4xl font-bold text-purple-600 mt-2">Rs. {stats.financial.inventoryValue.toLocaleString()}</p>
+                <p className="text-xs text-gray-500 mt-1">Cost of unsold stock</p>
               </div>
           </div>
           

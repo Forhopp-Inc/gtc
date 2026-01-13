@@ -75,6 +75,16 @@ export default function OrdersPage() {
     { productId: '', quantity: 1, sellingPrice: 0 }
   ])
 
+  // New Customer State
+  const [showCustomerModal, setShowCustomerModal] = useState(false)
+  const [newCustomerForm, setNewCustomerForm] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    address: '',
+    cnic: ''
+  })
+
   useEffect(() => {
     fetchOrders()
     fetchCustomers()
@@ -125,6 +135,28 @@ export default function OrdersPage() {
     const updated = [...orderItems]
     updated[index] = { ...updated[index], [field]: value }
     setOrderItems(updated)
+  }
+
+  const handleCreateCustomer = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      const response = await fetch('/api/customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newCustomerForm),
+      })
+
+      if (response.ok) {
+        const newCustomer = await response.json()
+        await fetchCustomers() // Refresh list
+        setFormData(prev => ({ ...prev, customerId: newCustomer.id })) // Auto select
+        setShowCustomerModal(false)
+        setNewCustomerForm({ name: '', phone: '', email: '', address: '', cnic: '' })
+      }
+    } catch (error) {
+      console.error('Failed to create customer:', error)
+      alert('Failed to create customer')
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -248,9 +280,18 @@ export default function OrdersPage() {
           <h2 className="text-xl font-semibold mb-4">Create New Order</h2>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Customer *
-              </label>
+              <div className="flex justify-between items-center mb-1">
+                <label className="block text-sm font-medium text-gray-700">
+                  Customer *
+                </label>
+                <button 
+                    type="button"
+                    onClick={() => setShowCustomerModal(true)}
+                    className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                >
+                    + New Customer
+                </button>
+              </div>
               <select
                 required
                 className="input-field"
@@ -554,6 +595,79 @@ export default function OrdersPage() {
       {orders.length === 0 && (
         <div className="card text-center py-12 mt-6">
           <p className="text-gray-500">No orders found. Create your first order to get started.</p>
+        </div>
+      )}
+
+      {/* New Customer Modal */}
+      {showCustomerModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+            <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={() => setShowCustomerModal(false)}></div>
+                <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                    <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                        <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4" id="modal-title">
+                            Add New Customer
+                        </h3>
+                        <form onSubmit={handleCreateCustomer} id="new-customer-form" className="space-y-4">
+                            <div className="grid grid-cols-1 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Customer Name *</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        className="input-field"
+                                        value={newCustomerForm.name}
+                                        onChange={(e) => setNewCustomerForm({ ...newCustomerForm, name: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                                    <input
+                                        type="text"
+                                        className="input-field"
+                                        value={newCustomerForm.phone}
+                                        onChange={(e) => setNewCustomerForm({ ...newCustomerForm, phone: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                    <input
+                                        type="email"
+                                        className="input-field"
+                                        value={newCustomerForm.email}
+                                        onChange={(e) => setNewCustomerForm({ ...newCustomerForm, email: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                                    <textarea
+                                        className="input-field"
+                                        rows={2}
+                                        value={newCustomerForm.address}
+                                        onChange={(e) => setNewCustomerForm({ ...newCustomerForm, address: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                        <button
+                            type="submit"
+                            form="new-customer-form"
+                            className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
+                        >
+                            Create & Select
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setShowCustomerModal(false)}
+                            className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
       )}
     </div>

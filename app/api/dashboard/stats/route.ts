@@ -35,7 +35,8 @@ export async function GET(request: Request) {
             (SELECT COUNT(*) FROM orders) as "totalOrders",
             (SELECT COUNT(*) FROM orders WHERE status = 'Pending') as "pendingOrders",
             (SELECT COUNT(*) FROM orders WHERE status = 'Completed') as "completedOrders",
-            (SELECT COALESCE(SUM(balance), 0) FROM customers) as "totalCustomerDebt"
+            (SELECT COALESCE(SUM(balance), 0) FROM customers) as "totalCustomerDebt",
+            (SELECT COALESCE(SUM(stock_quantity * price), 0) FROM products) as "inventoryValue"
     `);
     const counts = countsResult.rows[0];
 
@@ -158,6 +159,7 @@ export async function GET(request: Request) {
       },
       financial: {
         totalCustomerDebt: parseFloat(counts.totalCustomerDebt),
+        inventoryValue: parseFloat(counts.inventoryValue),
         totalRevenue,
         totalCost,
         totalExpenses,
