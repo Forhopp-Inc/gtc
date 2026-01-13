@@ -42,6 +42,10 @@ export default function InvestorDetailsPage() {
     transaction_date: new Date().toISOString().split('T')[0],
   })
 
+  // Date Filter State
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+
   useEffect(() => {
     fetchInvestorDetails()
     fetchTransactions()
@@ -110,9 +114,9 @@ export default function InvestorDetailsPage() {
       <div className="max-w-7xl mx-auto space-y-8">
         
         {/* Header Section */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 print:shadow-none print:border-none print:p-0">
             <div>
-                <Link href="/investors" className="text-sm font-medium text-gray-500 hover:text-blue-600 transition-colors mb-2 inline-flex items-center">
+                <Link href="/investors" className="text-sm font-medium text-gray-500 hover:text-blue-600 transition-colors mb-2 inline-flex items-center print:hidden">
                     <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
                     Back to Ledgers
                 </Link>
@@ -135,25 +139,25 @@ export default function InvestorDetailsPage() {
             
             <div className="flex flex-col items-end gap-3 w-full md:w-auto">
                 <div className="grid grid-cols-2 gap-2 text-right">
-                    <div className="bg-blue-50 px-4 py-2 rounded border border-blue-100">
-                        <p className="text-xs font-medium text-blue-800 uppercase">Invested</p>
-                        <p className="text-lg font-bold text-blue-700">Rs. {Number(investor.total_investment).toLocaleString()}</p>
+                    <div className="bg-blue-50 px-4 py-2 rounded border border-blue-100 print:border-gray-200 print:bg-white">
+                        <p className="text-xs font-medium text-blue-800 uppercase print:text-black">Invested</p>
+                        <p className="text-lg font-bold text-blue-700 print:text-black">Rs. {Number(investor.total_investment).toLocaleString()}</p>
                     </div>
-                    <div className="bg-green-50 px-4 py-2 rounded border border-green-100">
-                        <p className="text-xs font-medium text-green-800 uppercase">Profit</p>
-                        <p className="text-lg font-bold text-green-700">Rs. {Number(investor.total_profit).toLocaleString()}</p>
+                    <div className="bg-green-50 px-4 py-2 rounded border border-green-100 print:border-gray-200 print:bg-white">
+                        <p className="text-xs font-medium text-green-800 uppercase print:text-black">Profit</p>
+                        <p className="text-lg font-bold text-green-700 print:text-black">Rs. {Number(investor.total_profit).toLocaleString()}</p>
                     </div>
-                    <div className="bg-red-50 px-4 py-2 rounded border border-red-100">
-                        <p className="text-xs font-medium text-red-800 uppercase">Withdrawn</p>
-                        <p className="text-lg font-bold text-red-700">Rs. {Number(investor.total_withdrawn).toLocaleString()}</p>
+                    <div className="bg-red-50 px-4 py-2 rounded border border-red-100 print:border-gray-200 print:bg-white">
+                        <p className="text-xs font-medium text-red-800 uppercase print:text-black">Withdrawn</p>
+                        <p className="text-lg font-bold text-red-700 print:text-black">Rs. {Number(investor.total_withdrawn).toLocaleString()}</p>
                     </div>
-                    <div className="bg-gray-100 px-4 py-2 rounded border border-gray-200">
+                    <div className="bg-gray-100 px-4 py-2 rounded border border-gray-200 print:bg-white">
                         <p className="text-xs font-medium text-gray-800 uppercase">Balance</p>
-                        <p className="text-lg font-bold text-gray-700">Rs. {Number(investor.balance).toLocaleString()}</p>
+                        <p className="text-lg font-bold text-gray-700 print:text-black">Rs. {Number(investor.balance).toLocaleString()}</p>
                     </div>
                 </div>
 
-                <div className="flex gap-2 w-full mt-2">
+                <div className="flex gap-2 w-full mt-2 print:hidden">
                     <button
                         onClick={() => {
                             setTransactionForm({ ...transactionForm, type: 'Investment' })
@@ -186,23 +190,56 @@ export default function InvestorDetailsPage() {
         </div>
 
         {/* Ledger Table */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden print:shadow-none print:border-none">
+            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex flex-col md:flex-row justify-between items-center gap-4 print:bg-white print:px-0">
                 <h3 className="text-lg font-medium text-gray-900">Ledger History</h3>
+                
+                {/* Filters & Print */}
+                <div className="flex gap-2 items-center print:hidden">
+                    <input 
+                        type="date" 
+                        value={startDate} 
+                        onChange={(e) => setStartDate(e.target.value)}
+                        className="input-field py-1 text-sm w-auto"
+                    />
+                    <span className="text-gray-500">-</span>
+                    <input 
+                        type="date" 
+                        value={endDate} 
+                        onChange={(e) => setEndDate(e.target.value)}
+                        className="input-field py-1 text-sm w-auto"
+                    />
+                    <button 
+                        onClick={() => window.print()}
+                        className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded flex items-center gap-2 text-sm transition-colors"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                        Print Ledger
+                    </button>
+                </div>
             </div>
             <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+                    <thead className="bg-gray-50 print:bg-white">
                         <tr>
-                            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
-                            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Type</th>
-                            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Description</th>
-                            <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Amount</th>
+                            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider print:text-black">Date</th>
+                            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider print:text-black">Type</th>
+                            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider print:text-black">Description</th>
+                            <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider print:text-black">Amount</th>
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                        {transactions.map((transaction) => (
-                            <tr key={transaction.id} className="hover:bg-gray-50">
+                        {transactions
+                            .filter(t => {
+                                if (!startDate && !endDate) return true;
+                                const date = t.transaction_date.split('T')[0];
+                                if (startDate && endDate) return date >= startDate && date <= endDate;
+                                if (startDate) return date >= startDate;
+                                if (endDate) return date <= endDate;
+                                return true;
+                            })
+                            .map((transaction) => (
+                            <tr key={transaction.id} className="hover:bg-gray-50 print:hover:bg-white">
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                     {format(new Date(transaction.transaction_date), 'MMM d, yyyy')}
                                 </td>
