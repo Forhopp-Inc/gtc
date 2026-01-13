@@ -11,6 +11,8 @@ interface Transaction {
   type: string
   amount: string
   description: string | null
+  payment_method?: string
+  payment_details?: any
 }
 
 interface Investor {
@@ -35,12 +37,32 @@ export default function InvestorDetailsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
   const [showTransactionModal, setShowTransactionModal] = useState(false)
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
   const [transactionForm, setTransactionForm] = useState({
     type: 'Investment',
     amount: '',
     description: '',
     transaction_date: new Date().toISOString().split('T')[0],
+    paymentMethod: 'Cash',
+    fromBank: '',
+    fromAccount: '',
+    toBank: '',
+    toName: '',
+    toAccount: '',
+    collectedBy: '',
+    chequeNo: '',
+    chequeBank: ''
   })
+
+  const collectors = [
+    "Tahir Mahmood",
+    "Nasir Mahmood", 
+    "Hammad Nasir",
+    "Hassan",
+    "Kashif Mahmood",
+    "Khaleel Ur Rehman",
+    "Huzaifa Karamat"
+  ]
 
   // Date Filter State
   const [startDate, setStartDate] = useState('')
@@ -75,30 +97,112 @@ export default function InvestorDetailsPage() {
     }
   }
 
-  const handleAddTransaction = async (e: React.FormEvent) => {
+  const handleSaveTransaction = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!investor) return
 
     try {
-      const response = await fetch(`/api/investors/${investor.id}/transactions`, {
-        method: 'POST',
+      const url = editingTransaction 
+        ? `/api/investors/transactions/${editingTransaction.id}`
+        : `/api/investors/${investor.id}/transactions`
+      
+      const method = editingTransaction ? 'PUT' : 'POST'
+
+      // Construct payment details based on method
+      let paymentDetails = {}
+      if (['Investment', 'Withdrawal', 'Profit'].includes(transactionForm.type)) {
+          if (transactionForm.paymentMethod === 'Bank') {
+              paymentDetails = {
+                  fromBank: transactionForm.fromBank,
+                  fromAccount: transactionForm.fromAccount,
+                  toBank: transactionForm.toBank,
+                  toName: transactionForm.toName,
+                  toAccount: transactionForm.toAccount
+              }
+          } else if (transactionForm.paymentMethod === 'Cash') {
+              paymentDetails = { collectedBy: transactionForm.collectedBy }
+          } else if (transactionForm.paymentMethod === 'Cheque') {
+              paymentDetails = { chequeNo: transactionForm.chequeNo, chequeBank: transactionForm.chequeBank }
+          }
+      }
+
+      const payload = {
+          ...transactionForm,
+          paymentDetails,
+          paymentMethod: transactionForm.paymentMethod
+      }
+
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(transactionForm)
+        body: JSON.stringify(payload)
       })
 
       if (response.ok) {
         setShowTransactionModal(false)
-        setTransactionForm({
-            type: 'Investment',
-            amount: '',
-            description: '',
-            transaction_date: new Date().toISOString().split('T')[0],
-        })
+        setEditingTransaction(null)
+        resetForm()
         fetchInvestorDetails()
         fetchTransactions()
       }
     } catch (error) {
-      console.error('Error adding transaction:', error)
+      console.error('Error saving transaction:', error)
+    }
+  }
+
+  const resetForm = () => {
+    setTransactionForm({
+        type: 'Investment',
+        amount: '',
+        description: '',
+        transaction_date: new Date().toISOString().split('T')[0],
+        paymentMethod: 'Cash',
+        fromBank: '',
+        fromAccount: '',
+        toBank: '',
+        toName: '',
+        toAccount: '',
+        collectedBy: '',
+        chequeNo: '',
+        chequeBank: ''
+    })
+  }
+
+  const handleEditTransaction = (transaction: Transaction) => {
+    setEditingTransaction(transaction)
+    const details = transaction.payment_details || {}
+    setTransactionForm({
+        type: transaction.type,
+        amount: transaction.amount,
+        description: transaction.description || '',
+        transaction_date: new Date(transaction.transaction_date).toISOString().split('T')[0],
+        paymentMethod: transaction.payment_method || 'Cash',
+        fromBank: details.fromBank || '',
+        fromAccount: details.fromAccount || '',
+        toBank: details.toBank || '',
+        toName: details.toName || '',
+        toAccount: details.toAccount || '',
+        collectedBy: details.collectedBy || '',
+        chequeNo: details.chequeNo || '',
+        chequeBank: details.chequeBank || ''
+    })
+    setShowTransactionModal(true)
+  }
+
+  const handleDeleteTransaction = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this transaction?')) return
+
+    try {
+      const response = await fetch(`/api/investors/transactions/${id}`, {
+        method: 'DELETE',
+      })
+
+      if (response.ok) {
+        fetchInvestorDetails()
+        fetchTransactions()
+      }
+    } catch (error) {
+      console.error('Error deleting transaction:', error)
     }
   }
 
@@ -160,7 +264,9 @@ export default function InvestorDetailsPage() {
                 <div className="flex gap-2 w-full mt-2 print:hidden">
                     <button
                         onClick={() => {
-                            setTransactionForm({ ...transactionForm, type: 'Investment' })
+                            setEditingTransaction(null)
+                            resetForm()
+                            setTransactionForm(prev => ({...prev, type: 'Investment'}))
                             setShowTransactionModal(true)
                         }}
                         className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
@@ -169,7 +275,9 @@ export default function InvestorDetailsPage() {
                     </button>
                     <button
                         onClick={() => {
-                            setTransactionForm({ ...transactionForm, type: 'Profit' })
+                            setEditingTransaction(null)
+                            resetForm()
+                            setTransactionForm(prev => ({...prev, type: 'Profit'}))
                             setShowTransactionModal(true)
                         }}
                         className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
@@ -178,7 +286,9 @@ export default function InvestorDetailsPage() {
                     </button>
                     <button
                         onClick={() => {
-                            setTransactionForm({ ...transactionForm, type: 'Withdrawal' })
+                            setEditingTransaction(null)
+                            resetForm()
+                            setTransactionForm(prev => ({...prev, type: 'Withdrawal'}))
                             setShowTransactionModal(true)
                         }}
                         className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
@@ -226,6 +336,7 @@ export default function InvestorDetailsPage() {
                             <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider print:text-black">Type</th>
                             <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider print:text-black">Description</th>
                             <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider print:text-black">Amount</th>
+                            <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider print:hidden">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
@@ -260,6 +371,20 @@ export default function InvestorDetailsPage() {
                                 }`}>
                                     {transaction.type === 'Withdrawal' ? '-' : '+'} Rs. {parseFloat(transaction.amount).toLocaleString()}
                                 </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium print:hidden">
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); handleEditTransaction(transaction); }}
+                                        className="text-blue-600 hover:text-blue-900 mr-4"
+                                    >
+                                        Edit
+                                    </button>
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); handleDeleteTransaction(transaction.id); }}
+                                        className="text-red-600 hover:text-red-900"
+                                    >
+                                        Delete
+                                    </button>
+                                </td>
                             </tr>
                         ))}
                         {transactions.length === 0 && (
@@ -284,12 +409,24 @@ export default function InvestorDetailsPage() {
                         <div className="sm:flex sm:items-start">
                             <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
                                 <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-                                    Record {transactionForm.type}
+                                    {editingTransaction ? 'Edit Transaction' : `Record ${transactionForm.type}`}
                                 </h3>
                                 <div className="mt-6 space-y-4">
-                                    <form onSubmit={handleAddTransaction} id="transaction-form">
+                                    <form onSubmit={handleSaveTransaction} id="transaction-form">
                                         
                                         <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700">Type</label>
+                                                <select
+                                                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                                                    value={transactionForm.type}
+                                                    onChange={(e) => setTransactionForm({...transactionForm, type: e.target.value})}
+                                                >
+                                                    <option value="Investment">Investment</option>
+                                                    <option value="Profit">Profit</option>
+                                                    <option value="Withdrawal">Withdrawal</option>
+                                                </select>
+                                            </div>
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700">Amount (PKR)</label>
                                                 <input
@@ -312,6 +449,56 @@ export default function InvestorDetailsPage() {
                                                 />
                                             </div>
                                         </div>
+
+                                        {['Investment', 'Withdrawal', 'Profit'].includes(transactionForm.type) && (
+                                            <div className="bg-gray-50 p-3 rounded space-y-3">
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700">Payment Method</label>
+                                                    <select
+                                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                                                        value={transactionForm.paymentMethod}
+                                                        onChange={(e) => setTransactionForm({...transactionForm, paymentMethod: e.target.value})}
+                                                    >
+                                                        <option value="Cash">Cash</option>
+                                                        <option value="Bank">Bank Transfer</option>
+                                                        <option value="Cheque">Cheque</option>
+                                                    </select>
+                                                </div>
+
+                                                {transactionForm.paymentMethod === 'Bank' && (
+                                                    <div className="grid grid-cols-2 gap-3">
+                                                        <input type="text" placeholder="From Bank" className="input-field" value={transactionForm.fromBank} onChange={e => setTransactionForm({...transactionForm, fromBank: e.target.value})} />
+                                                        <input type="text" placeholder="From Account #" className="input-field" value={transactionForm.fromAccount} onChange={e => setTransactionForm({...transactionForm, fromAccount: e.target.value})} />
+                                                        <input type="text" placeholder="To Bank" className="input-field" value={transactionForm.toBank} onChange={e => setTransactionForm({...transactionForm, toBank: e.target.value})} />
+                                                        <input type="text" placeholder="To Name" className="input-field" value={transactionForm.toName} onChange={e => setTransactionForm({...transactionForm, toName: e.target.value})} />
+                                                        <input type="text" placeholder="To Account #" className="input-field col-span-2" value={transactionForm.toAccount} onChange={e => setTransactionForm({...transactionForm, toAccount: e.target.value})} />
+                                                    </div>
+                                                )}
+
+                                                {transactionForm.paymentMethod === 'Cash' && (
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700">Cash Collected By</label>
+                                                        <select
+                                                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                                                            value={transactionForm.collectedBy}
+                                                            onChange={(e) => setTransactionForm({...transactionForm, collectedBy: e.target.value})}
+                                                        >
+                                                            <option value="">Select Collector</option>
+                                                            {collectors.map(name => (
+                                                                <option key={name} value={name}>{name}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                )}
+
+                                                {transactionForm.paymentMethod === 'Cheque' && (
+                                                    <div className="grid grid-cols-2 gap-3">
+                                                        <input type="text" placeholder="Cheque No." className="input-field" value={transactionForm.chequeNo} onChange={e => setTransactionForm({...transactionForm, chequeNo: e.target.value})} />
+                                                        <input type="text" placeholder="Bank" className="input-field" value={transactionForm.chequeBank} onChange={e => setTransactionForm({...transactionForm, chequeBank: e.target.value})} />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
 
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700">Description / Notes</label>

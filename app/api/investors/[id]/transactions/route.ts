@@ -29,15 +29,15 @@ export async function POST(
 ) {
   try {
     const body = await request.json()
-    const { type, amount, description, transaction_date } = body
+    const { type, amount, description, transaction_date, paymentMethod, paymentDetails } = body
     
     // type: 'Investment', 'Withdrawal', 'Profit'
 
     const result = await db.query(
-      `INSERT INTO investor_transactions (investor_id, type, amount, description, transaction_date)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO investor_transactions (investor_id, type, amount, description, transaction_date, payment_method, payment_details)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
-      [params.id, type, amount, description, transaction_date || new Date()]
+      [params.id, type, amount, description, transaction_date || new Date(), paymentMethod || null, paymentDetails || null]
     )
     
     return NextResponse.json(result.rows[0], { status: 201 })
