@@ -77,14 +77,14 @@ export default function InvestorsPage() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-6 flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Investors</h1>
-          <p className="text-gray-600 mt-2">Manage investors and their ledgers</p>
+          <h1 className="text-3xl font-bold text-gray-900">Ledgers</h1>
+          <p className="text-gray-600 mt-2">Manage persons and their ledgers</p>
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
           className="btn-primary"
         >
-          {showForm ? 'Cancel' : '+ Add Investor'}
+          {showForm ? 'Cancel' : '+ Add Person'}
         </button>
       </div>
 
@@ -100,7 +100,7 @@ export default function InvestorsPage() {
 
       {showForm && (
         <div className="card mb-6">
-          <h2 className="text-xl font-semibold mb-4">Add New Investor</h2>
+          <h2 className="text-xl font-semibold mb-4">Add New Person</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -162,7 +162,7 @@ export default function InvestorsPage() {
             </div>
             <div className="flex gap-2">
               <button type="submit" className="btn-primary">
-                Create Investor
+                Create Person
               </button>
               <button
                 type="button"
