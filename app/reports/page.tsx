@@ -100,6 +100,11 @@ export default function ReportsPage() {
             start = today
             end = today
             break
+        case 'last7Days':
+            start = new Date(today)
+            start.setDate(today.getDate() - 7)
+            end = today
+            break
         case 'thisMonth':
             start = startOfMonth(today)
             end = endOfMonth(today)
@@ -159,8 +164,10 @@ export default function ReportsPage() {
             </div>
             <div className="flex gap-2">
                 <button onClick={() => handleDatePreset('today')} className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded">Today</button>
+                <button onClick={() => handleDatePreset('last7Days')} className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded">Last 7 Days</button>
                 <button onClick={() => handleDatePreset('thisMonth')} className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded">This Month</button>
                 <button onClick={() => handleDatePreset('lastMonth')} className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded">Last Month</button>
+                <button onClick={() => handleDatePreset('thisYear')} className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded">This Year</button>
             </div>
             <button 
                 onClick={fetchStats}

@@ -7,7 +7,22 @@ export async function GET(
 ) {
   try {
     const result = await db.query(
-      `SELECT * FROM investors WHERE id = $1`,
+      `SELECT 
+        i.*,
+        (
+            SELECT COALESCE(SUM(CASE WHEN type = 'Investment' THEN amount ELSE 0 END), 0) 
+            FROM investor_transactions WHERE investor_id = i.id
+        ) as total_investment,
+        (
+            SELECT COALESCE(SUM(CASE WHEN type = 'Withdrawal' THEN amount ELSE 0 END), 0)
+            FROM investor_transactions WHERE investor_id = i.id
+        ) as total_withdrawn,
+        (
+            SELECT COALESCE(SUM(CASE WHEN type = 'Profit' THEN amount ELSE 0 END), 0)
+            FROM investor_transactions WHERE investor_id = i.id
+        ) as total_profit
+      FROM investors i
+      WHERE i.id = $1`,
       [params.id]
     )
 
@@ -18,7 +33,16 @@ export async function GET(
       )
     }
 
-    return NextResponse.json(result.rows[0])
+    const investor = result.rows[0];
+    // Calculate balance
+    // Balance = Investment + Profit - Withdrawal
+    const balance = (
+        parseFloat(investor.total_investment) + 
+        parseFloat(investor.total_profit) - 
+        parseFloat(investor.total_withdrawn)
+    ).toFixed(2);
+
+    return NextResponse.json({ ...investor, balance })
   } catch (error) {
     console.error('Error fetching investor:', error)
     return NextResponse.json(
