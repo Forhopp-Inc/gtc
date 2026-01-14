@@ -68,6 +68,30 @@ export default function Home() {
           </div>
         </Link>
 
+        <Link href="/investors" className="group bg-white rounded-lg border border-gray-200 p-6 hover:border-black transition-all duration-300 hover:shadow-sm">
+          <div className="flex flex-col items-center text-center">
+            <div className="mb-4 p-3 rounded-full bg-gray-50 group-hover:bg-black transition-colors duration-300">
+              <svg className="w-6 h-6 text-black group-hover:text-white transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            </div>
+            <h2 className="text-base font-semibold text-gray-900 mb-1">Investors</h2>
+            <p className="text-xs text-gray-500 leading-relaxed">Manage investors</p>
+          </div>
+        </Link>
+
+        <Link href="/bank-accounts" className="group bg-white rounded-lg border border-gray-200 p-6 hover:border-black transition-all duration-300 hover:shadow-sm">
+          <div className="flex flex-col items-center text-center">
+            <div className="mb-4 p-3 rounded-full bg-gray-50 group-hover:bg-black transition-colors duration-300">
+              <svg className="w-6 h-6 text-black group-hover:text-white transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
+              </svg>
+            </div>
+            <h2 className="text-base font-semibold text-gray-900 mb-1">Bank Accounts</h2>
+            <p className="text-xs text-gray-500 leading-relaxed">Manage accounts</p>
+          </div>
+        </Link>
+
         <Link href="/reports" className="group bg-white rounded-lg border border-gray-200 p-6 hover:border-black transition-all duration-300 hover:shadow-sm">
           <div className="flex flex-col items-center text-center">
             <div className="mb-4 p-3 rounded-full bg-gray-50 group-hover:bg-black transition-colors duration-300">
