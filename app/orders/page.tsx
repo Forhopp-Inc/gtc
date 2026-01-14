@@ -39,10 +39,18 @@ interface Order {
   }>
 }
 
+interface BankAccount {
+  id: string
+  bank_name: string
+  account_title: string
+  account_number: string
+}
+
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
   const [products, setProducts] = useState<Product[]>([])
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState({
@@ -89,7 +97,18 @@ export default function OrdersPage() {
     fetchOrders()
     fetchCustomers()
     fetchProducts()
+    fetchBankAccounts()
   }, [])
+
+  const fetchBankAccounts = async () => {
+    try {
+      const response = await fetch('/api/bank-accounts')
+      const data = await response.json()
+      setBankAccounts(data)
+    } catch (error) {
+      console.error('Failed to fetch bank accounts:', error)
+    }
+  }
 
   const fetchOrders = async () => {
     try {
@@ -381,15 +400,20 @@ export default function OrdersPage() {
                     <>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Bank Name
+                          Bank Account
                         </label>
-                        <input
-                          type="text"
+                        <select
                           className="input-field"
                           value={formData.bankName}
                           onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
-                          placeholder="e.g., HBL, Meezan"
-                        />
+                        >
+                          <option value="">Select Bank Account</option>
+                          {bankAccounts.map((account) => (
+                            <option key={account.id} value={`${account.bank_name} (${account.account_number})`}>
+                              {account.bank_name} - {account.account_title} ({account.account_number})
+                            </option>
+                          ))}
+                        </select>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">

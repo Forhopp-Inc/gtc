@@ -52,10 +52,18 @@ interface Customer {
   createdAt: string
 }
 
+interface BankAccount {
+  id: string
+  bank_name: string
+  account_title: string
+  account_number: string
+}
+
 export default function CustomerDetailsPage() {
   const params = useParams()
   const router = useRouter()
   const [customer, setCustomer] = useState<Customer | null>(null)
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'orders' | 'payments'>('orders')
   const [showPaymentModal, setShowPaymentModal] = useState(false)
@@ -92,7 +100,18 @@ export default function CustomerDetailsPage() {
 
   useEffect(() => {
     fetchCustomerDetails()
+    fetchBankAccounts()
   }, [])
+
+  const fetchBankAccounts = async () => {
+    try {
+      const response = await fetch('/api/bank-accounts')
+      const data = await response.json()
+      setBankAccounts(data)
+    } catch (error) {
+      console.error('Failed to fetch bank accounts:', error)
+    }
+  }
 
   const fetchCustomerDetails = async () => {
     try {
@@ -433,13 +452,19 @@ export default function CustomerDetailsPage() {
 
                                                 {(paymentForm.paymentMethod === 'Bank' || paymentForm.paymentMethod === 'Cheque') && (
                                                     <div>
-                                                        <label className="block text-sm font-medium text-gray-700">Bank Name</label>
-                                                        <input
-                                                        type="text"
-                                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-                                                        value={paymentForm.bankName}
-                                                        onChange={(e) => setPaymentForm({...paymentForm, bankName: e.target.value})}
-                                                        />
+                                                        <label className="block text-sm font-medium text-gray-700">Bank Account</label>
+                                                        <select
+                                                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                                                            value={paymentForm.bankName}
+                                                            onChange={(e) => setPaymentForm({...paymentForm, bankName: e.target.value})}
+                                                        >
+                                                            <option value="">Select Bank Account</option>
+                                                            {bankAccounts.map((account) => (
+                                                                <option key={account.id} value={`${account.bank_name} (${account.account_number})`}>
+                                                                    {account.bank_name} - {account.account_title} ({account.account_number})
+                                                                </option>
+                                                            ))}
+                                                        </select>
                                                     </div>
                                                 )}
 
@@ -478,13 +503,19 @@ export default function CustomerDetailsPage() {
 
                                                 {(paymentForm.paymentMethod === 'Bank' || paymentForm.paymentMethod === 'Cheque') && (
                                                     <div>
-                                                        <label className="block text-sm font-medium text-gray-700">Bank Name</label>
-                                                        <input
-                                                        type="text"
-                                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-                                                        value={paymentForm.bankName}
-                                                        onChange={(e) => setPaymentForm({...paymentForm, bankName: e.target.value})}
-                                                        />
+                                                        <label className="block text-sm font-medium text-gray-700">Bank Account</label>
+                                                        <select
+                                                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                                                            value={paymentForm.bankName}
+                                                            onChange={(e) => setPaymentForm({...paymentForm, bankName: e.target.value})}
+                                                        >
+                                                            <option value="">Select Bank Account</option>
+                                                            {bankAccounts.map((account) => (
+                                                                <option key={account.id} value={`${account.bank_name} (${account.account_number})`}>
+                                                                    {account.bank_name} - {account.account_title} ({account.account_number})
+                                                                </option>
+                                                            ))}
+                                                        </select>
                                                     </div>
                                                 )}
 

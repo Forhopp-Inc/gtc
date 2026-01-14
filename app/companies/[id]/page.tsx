@@ -59,10 +59,18 @@ interface Company {
   transactions: Transaction[]
 }
 
+interface BankAccount {
+  id: string
+  bank_name: string
+  account_title: string
+  account_number: string
+}
+
 export default function CompanyDetailsPage() {
   const params = useParams()
   const router = useRouter()
   const [company, setCompany] = useState<Company | null>(null)
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreditModal, setShowCreditModal] = useState(false)
   const [activeTab, setActiveTab] = useState<'products' | 'transactions'>('transactions')
@@ -80,7 +88,18 @@ export default function CompanyDetailsPage() {
 
   useEffect(() => {
     fetchCompanyDetails()
+    fetchBankAccounts()
   }, [])
+
+  const fetchBankAccounts = async () => {
+    try {
+      const response = await fetch('/api/bank-accounts')
+      const data = await response.json()
+      setBankAccounts(data)
+    } catch (error) {
+      console.error('Failed to fetch bank accounts:', error)
+    }
+  }
 
   const totalBalance = company?.transactions
     .filter(t => t.status === 'Completed' || (t.status === 'Pending' && t.type === 'Purchase'))
@@ -435,25 +454,35 @@ export default function CompanyDetailsPage() {
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-2 gap-4 mt-4">
-                                            <div>
-                                                <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide">Bank Name</label>
-                                                <input
-                                                type="text"
-                                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
-                                                value={creditForm.bankName}
-                                                onChange={(e) => setCreditForm({...creditForm, bankName: e.target.value})}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide">Account Number</label>
-                                                <input
-                                                type="text"
+                                        <div className="mt-4">
+                                            <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide">From Bank Account</label>
+                                            <select
                                                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
                                                 value={creditForm.bankAccount}
-                                                onChange={(e) => setCreditForm({...creditForm, bankAccount: e.target.value})}
-                                                />
-                                            </div>
+                                                onChange={(e) => {
+                                                    const account = bankAccounts.find(a => a.account_number === e.target.value);
+                                                    if (account) {
+                                                        setCreditForm({
+                                                            ...creditForm,
+                                                            bankName: account.bank_name,
+                                                            bankAccount: account.account_number
+                                                        });
+                                                    } else {
+                                                        setCreditForm({
+                                                            ...creditForm,
+                                                            bankName: '',
+                                                            bankAccount: ''
+                                                        });
+                                                    }
+                                                }}
+                                            >
+                                                <option value="">Select Account</option>
+                                                {bankAccounts.map((account) => (
+                                                    <option key={account.id} value={account.account_number}>
+                                                        {account.bank_name} - {account.account_title} ({account.account_number})
+                                                    </option>
+                                                ))}
+                                            </select>
                                         </div>
 
                                         <div className="relative my-6">
