@@ -35,20 +35,57 @@ interface Transaction {
   }
 }
 
+interface BankAccount {
+  id: string
+  bank_name: string
+  account_title: string
+  account_number: string
+}
+
 export default function TransactionPage() {
   const params = useParams()
   const router = useRouter()
   const [transaction, setTransaction] = useState<Transaction | null>(null)
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([])
   const [loading, setLoading] = useState(true)
+  
+  // Modal States
   const [showReceiptModal, setShowReceiptModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  
+  // Forms
   const [receiptForm, setReceiptForm] = useState({
     prReceiptNumber: '',
     prReceiptDate: new Date().toISOString().split('T')[0]
   })
 
+  const [editForm, setEditForm] = useState({
+    amount: '',
+    transactionDate: '',
+    description: '',
+    notes: '',
+    fromName: '',
+    bankName: '',
+    bankAccount: '',
+    companyBank: '',
+    companyBankAccount: '',
+    status: ''
+  })
+
   useEffect(() => {
     fetchTransaction()
+    fetchBankAccounts()
   }, [])
+
+  const fetchBankAccounts = async () => {
+    try {
+      const response = await fetch('/api/bank-accounts')
+      const data = await response.json()
+      setBankAccounts(data)
+    } catch (error) {
+      console.error('Failed to fetch bank accounts:', error)
+    }
+  }
 
   const fetchTransaction = async () => {
     try {
@@ -56,6 +93,20 @@ export default function TransactionPage() {
       if (!response.ok) throw new Error('Failed to fetch transaction')
       const data = await response.json()
       setTransaction(data)
+      
+      // Initialize edit form
+      setEditForm({
+        amount: data.amount,
+        transactionDate: new Date(data.transactionDate).toISOString().split('T')[0],
+        description: data.description || '',
+        notes: data.notes || '',
+        fromName: data.fromDetails?.fromName || '',
+        bankName: data.fromDetails?.bankName || '',
+        bankAccount: data.fromDetails?.bankAccount || '',
+        companyBank: data.toDetails?.companyBank || '',
+        companyBankAccount: data.toDetails?.companyBankAccount || '',
+        status: data.status
+      })
     } catch (error) {
       console.error('Error:', error)
     } finally {
@@ -65,6 +116,59 @@ export default function TransactionPage() {
 
   const handlePrint = () => {
     window.print()
+  }
+
+  const handleDelete = async () => {
+    if (!confirm('Are you sure you want to delete this transaction? This action cannot be undone.')) return
+
+    try {
+      const response = await fetch(`/api/transactions/${transaction?.id}`, {
+        method: 'DELETE',
+      })
+
+      if (response.ok) {
+        router.back()
+      }
+    } catch (error) {
+      console.error('Error deleting transaction:', error)
+    }
+  }
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!transaction) return
+
+    try {
+      const payload = {
+        amount: parseFloat(editForm.amount),
+        transactionDate: new Date(editForm.transactionDate).toISOString(),
+        description: editForm.description,
+        notes: editForm.notes,
+        status: editForm.status,
+        fromDetails: {
+          fromName: editForm.fromName,
+          bankName: editForm.bankName,
+          bankAccount: editForm.bankAccount
+        },
+        toDetails: {
+          companyBank: editForm.companyBank,
+          companyBankAccount: editForm.companyBankAccount
+        }
+      }
+
+      const response = await fetch(`/api/transactions/${transaction.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+
+      if (response.ok) {
+        setShowEditModal(false)
+        fetchTransaction()
+      }
+    } catch (error) {
+      console.error('Error editing transaction:', error)
+    }
   }
 
   const handleReceiptSubmit = async (e: React.FormEvent) => {
@@ -116,15 +220,27 @@ export default function TransactionPage() {
                         onClick={() => setShowReceiptModal(true)}
                         className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 shadow-sm text-sm font-medium"
                     >
-                        Complete Transaction
+                        Complete
                     </button>
                 )}
+                <button 
+                    onClick={() => setShowEditModal(true)}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 shadow-sm text-sm font-medium"
+                >
+                    Edit
+                </button>
+                <button 
+                    onClick={handleDelete}
+                    className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 shadow-sm text-sm font-medium"
+                >
+                    Delete
+                </button>
                 <button 
                     onClick={handlePrint}
                     className="bg-gray-800 text-white px-4 py-2 rounded-md hover:bg-gray-900 shadow-sm text-sm font-medium flex items-center"
                 >
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
-                    Print Voucher
+                    Print
                 </button>
             </div>
         </div>
@@ -295,6 +411,169 @@ export default function TransactionPage() {
                             type="button"
                             onClick={() => setShowReceiptModal(false)}
                             className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+      )}
+
+      {/* Edit Transaction Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto print:hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+            <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={() => setShowEditModal(false)}></div>
+                <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                    <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                        <div className="sm:flex sm:items-start">
+                            <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
+                                <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">Edit Transaction</h3>
+                                <div className="mt-6 space-y-4">
+                                    <form onSubmit={handleEditSubmit} id="edit-transaction-form">
+                                        <div className="bg-gray-50 p-4 rounded-md mb-4">
+                                            <label className="block text-sm font-medium text-gray-700">Amount (PKR)</label>
+                                            <input
+                                                type="number"
+                                                required
+                                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 text-lg font-semibold"
+                                                value={editForm.amount}
+                                                onChange={(e) => setEditForm({...editForm, amount: e.target.value})}
+                                            />
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide">From Name</label>
+                                                <input
+                                                type="text"
+                                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
+                                                value={editForm.fromName}
+                                                onChange={(e) => setEditForm({...editForm, fromName: e.target.value})}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide">Date</label>
+                                                <input
+                                                type="date"
+                                                required
+                                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
+                                                value={editForm.transactionDate}
+                                                onChange={(e) => setEditForm({...editForm, transactionDate: e.target.value})}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-4">
+                                            <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide">From Bank Account</label>
+                                            <select
+                                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
+                                                value={editForm.bankAccount}
+                                                onChange={(e) => {
+                                                    const account = bankAccounts.find(a => a.account_number === e.target.value);
+                                                    if (account) {
+                                                        setEditForm({
+                                                            ...editForm,
+                                                            bankName: account.bank_name,
+                                                            bankAccount: account.account_number
+                                                        });
+                                                    } else {
+                                                        setEditForm({
+                                                            ...editForm,
+                                                            bankName: '',
+                                                            bankAccount: ''
+                                                        });
+                                                    }
+                                                }}
+                                            >
+                                                <option value="">Select Account</option>
+                                                {bankAccounts.map((account) => (
+                                                    <option key={account.id} value={account.account_number}>
+                                                        {account.bank_name} - {account.account_title} ({account.account_number})
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        <div className="relative my-6">
+                                            <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                                                <div className="w-full border-t border-gray-300"></div>
+                                            </div>
+                                            <div className="relative flex justify-center">
+                                                <span className="px-2 bg-white text-sm text-gray-500">Receiver Details</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide">Company Bank</label>
+                                                <input
+                                                type="text"
+                                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
+                                                value={editForm.companyBank}
+                                                onChange={(e) => setEditForm({...editForm, companyBank: e.target.value})}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide">Company Account #</label>
+                                                <input
+                                                type="text"
+                                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
+                                                value={editForm.companyBankAccount}
+                                                onChange={(e) => setEditForm({...editForm, companyBankAccount: e.target.value})}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-4">
+                                            <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide">Description</label>
+                                            <textarea
+                                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
+                                                rows={2}
+                                                value={editForm.description}
+                                                onChange={(e) => setEditForm({...editForm, description: e.target.value})}
+                                            />
+                                        </div>
+
+                                        <div className="mt-4">
+                                            <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide">Notes</label>
+                                            <textarea
+                                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
+                                                rows={2}
+                                                value={editForm.notes}
+                                                onChange={(e) => setEditForm({...editForm, notes: e.target.value})}
+                                            />
+                                        </div>
+
+                                        <div className="mt-4">
+                                            <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide">Status</label>
+                                            <select
+                                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
+                                                value={editForm.status}
+                                                onChange={(e) => setEditForm({...editForm, status: e.target.value})}
+                                            >
+                                                <option value="Pending">Pending</option>
+                                                <option value="Completed">Completed</option>
+                                            </select>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                        <button
+                            type="submit"
+                            form="edit-transaction-form"
+                            className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
+                        >
+                            Save Changes
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setShowEditModal(false)}
+                            className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
                         >
                             Cancel
                         </button>
