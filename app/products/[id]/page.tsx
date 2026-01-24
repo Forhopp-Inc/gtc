@@ -105,7 +105,8 @@ export default function ProductDetailsPage() {
         body: JSON.stringify({
             amount: parseFloat(editingPurchase.amount),
             description: editingPurchase.description,
-            invoiceNumber: editingPurchase.invoiceNumber
+            invoiceNumber: editingPurchase.invoiceNumber,
+            transactionDate: editingPurchase.transactionDate
         })
       })
 
@@ -292,6 +293,16 @@ export default function ProductDetailsPage() {
                                 <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">Edit Purchase Transaction</h3>
                                 <div className="mt-6 space-y-4">
                                     <form onSubmit={handleUpdatePurchase} id="edit-purchase-form">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700">Transaction Date</label>
+                                            <input
+                                                type="date"
+                                                required
+                                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                                                value={editingPurchase.transactionDate ? new Date(editingPurchase.transactionDate).toISOString().split('T')[0] : ''}
+                                                onChange={(e) => setEditingPurchase({...editingPurchase, transactionDate: e.target.value})}
+                                            />
+                                        </div>
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700">Description</label>
                                             <textarea
