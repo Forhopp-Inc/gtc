@@ -73,6 +73,7 @@ export default function CompanyDetailsPage() {
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreditModal, setShowCreditModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
   const [activeTab, setActiveTab] = useState<'products' | 'transactions'>('transactions')
 
   // Credit Form State
@@ -84,6 +85,13 @@ export default function CompanyDetailsPage() {
     date: new Date().toISOString().split('T')[0],
     companyBank: '',
     companyBankAccount: ''
+  })
+
+  // Edit Form State
+  const [editForm, setEditForm] = useState({
+    name: '',
+    contactInfo: '',
+    address: ''
   })
 
   useEffect(() => {
@@ -117,10 +125,60 @@ export default function CompanyDetailsPage() {
       if (!response.ok) throw new Error('Failed to fetch company')
       const data = await response.json()
       setCompany(data)
+      setEditForm({
+        name: data.name || '',
+        contactInfo: data.contactInfo || '',
+        address: data.address || ''
+      })
     } catch (error) {
       console.error('Error:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleEditCompany = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!company) return
+
+    try {
+      const response = await fetch(`/api/companies/${company.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editForm.name,
+          contactInfo: editForm.contactInfo,
+          address: editForm.address
+        })
+      })
+
+      if (response.ok) {
+        setShowEditModal(false)
+        fetchCompanyDetails()
+      }
+    } catch (error) {
+      console.error('Error updating company:', error)
+    }
+  }
+
+  const handleDeleteCompany = async () => {
+    if (!company) return
+    if (!confirm(`Are you sure you want to delete "${company.name}"? This will also delete all associated transactions and products. This action cannot be undone.`)) return
+
+    try {
+      const response = await fetch(`/api/companies/${company.id}`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        router.push('/companies')
+      } else {
+        const data = await response.json()
+        alert(data.error || 'Failed to delete company')
+      }
+    } catch (error) {
+      console.error('Error deleting company:', error)
+      alert('Failed to delete company')
     }
   }
 
@@ -186,10 +244,28 @@ export default function CompanyDetailsPage() {
         {/* Header Section */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
-                <Link href="/companies" className="text-sm font-medium text-gray-500 hover:text-blue-600 transition-colors mb-2 inline-flex items-center">
-                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
-                    Back to Companies
-                </Link>
+                <div className="flex items-center justify-between">
+                    <Link href="/companies" className="text-sm font-medium text-gray-500 hover:text-blue-600 transition-colors mb-2 inline-flex items-center">
+                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                        Back to Companies
+                    </Link>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setShowEditModal(true)}
+                            className="text-gray-500 hover:text-blue-600 p-1.5 rounded-md hover:bg-gray-100 transition-colors"
+                            title="Edit Company"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                        </button>
+                        <button
+                            onClick={handleDeleteCompany}
+                            className="text-gray-500 hover:text-red-600 p-1.5 rounded-md hover:bg-red-50 transition-colors"
+                            title="Delete Company"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        </button>
+                    </div>
+                </div>
                 <h1 className="text-3xl font-bold text-gray-900 mt-1">{company.name}</h1>
                 <div className="flex items-center gap-4 mt-2 text-gray-600 text-sm">
                     {company.contactInfo && (
@@ -406,6 +482,76 @@ export default function CompanyDetailsPage() {
         )}
 
       </div>
+
+      {/* Edit Company Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+            <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={() => setShowEditModal(false)}></div>
+                <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                    <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                        <div className="sm:flex sm:items-start">
+                            <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 sm:mx-0 sm:h-10 sm:w-10">
+                                <svg className="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                            </div>
+                            <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                                <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">Edit Company</h3>
+                                <div className="mt-6 space-y-4">
+                                    <form onSubmit={handleEditCompany} id="edit-company-form">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700">Company Name</label>
+                                            <input
+                                                type="text"
+                                                required
+                                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                                                value={editForm.name}
+                                                onChange={(e) => setEditForm({...editForm, name: e.target.value})}
+                                            />
+                                        </div>
+                                        <div className="mt-4">
+                                            <label className="block text-sm font-medium text-gray-700">Contact Info (Phone)</label>
+                                            <input
+                                                type="text"
+                                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                                                value={editForm.contactInfo}
+                                                onChange={(e) => setEditForm({...editForm, contactInfo: e.target.value})}
+                                            />
+                                        </div>
+                                        <div className="mt-4">
+                                            <label className="block text-sm font-medium text-gray-700">Address</label>
+                                            <textarea
+                                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                                                rows={3}
+                                                value={editForm.address}
+                                                onChange={(e) => setEditForm({...editForm, address: e.target.value})}
+                                            />
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                        <button
+                            type="submit"
+                            form="edit-company-form"
+                            className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
+                        >
+                            Save Changes
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setShowEditModal(false)}
+                            className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+      )}
 
       {/* Add Credit Modal */}
       {showCreditModal && (
