@@ -74,7 +74,14 @@ export default function CompanyDetailsPage() {
   const [loading, setLoading] = useState(true)
   const [showCreditModal, setShowCreditModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [showPrintModal, setShowPrintModal] = useState(false)
   const [activeTab, setActiveTab] = useState<'products' | 'transactions'>('transactions')
+
+  // Print Date Range State
+  const [printDateRange, setPrintDateRange] = useState({
+    startDate: '',
+    endDate: ''
+  })
 
   // Credit Form State
   const [creditForm, setCreditForm] = useState({
@@ -321,7 +328,16 @@ export default function CompanyDetailsPage() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
                     <h3 className="text-lg font-semibold text-gray-900">Recent Transactions</h3>
-                    <span className="text-sm text-gray-500">{company.transactions.length} records</span>
+                    <div className="flex items-center gap-3">
+                        <span className="text-sm text-gray-500">{company.transactions.length} records</span>
+                        <button
+                            onClick={() => setShowPrintModal(true)}
+                            className="flex items-center gap-1.5 bg-gray-800 hover:bg-gray-900 text-white px-3 py-1.5 rounded-md shadow-sm transition-all text-sm font-medium"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                            Print Report
+                        </button>
+                    </div>
                 </div>
                 <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -543,6 +559,210 @@ export default function CompanyDetailsPage() {
                         <button
                             type="button"
                             onClick={() => setShowEditModal(false)}
+                            className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+      )}
+
+      {/* Print Report Modal */}
+      {showPrintModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+            <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={() => setShowPrintModal(false)}></div>
+                <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+                    <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                        <div className="sm:flex sm:items-start">
+                            <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-gray-100 sm:mx-0 sm:h-10 sm:w-10">
+                                <svg className="h-6 w-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                            </div>
+                            <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                                <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">Print Transaction Report</h3>
+                                <div className="mt-4">
+                                    <p className="text-sm text-gray-500">Select a date range to filter transactions, or leave empty to print all transactions.</p>
+                                    <div className="grid grid-cols-2 gap-4 mt-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700">Start Date</label>
+                                            <input
+                                                type="date"
+                                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                                                value={printDateRange.startDate}
+                                                onChange={(e) => setPrintDateRange({...printDateRange, startDate: e.target.value})}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700">End Date</label>
+                                            <input
+                                                type="date"
+                                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                                                value={printDateRange.endDate}
+                                                onChange={(e) => setPrintDateRange({...printDateRange, endDate: e.target.value})}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Print Preview */}
+                                <div className="mt-6 border border-gray-200 rounded-lg overflow-hidden" id="print-content">
+                                    <div className="bg-white p-6">
+                                        {/* Report Header */}
+                                        <div className="border-b-2 border-gray-900 pb-4 mb-6">
+                                            <h1 className="text-2xl font-bold text-gray-900 text-center">Transaction History Report</h1>
+                                            <p className="text-center text-gray-600 mt-1">{company.name}</p>
+                                            {company.address && <p className="text-center text-gray-500 text-sm">{company.address}</p>}
+                                            {(printDateRange.startDate || printDateRange.endDate) && (
+                                                <p className="text-center text-gray-500 text-sm mt-2">
+                                                    Period: {printDateRange.startDate ? format(new Date(printDateRange.startDate), 'MMM d, yyyy') : 'Beginning'} - {printDateRange.endDate ? format(new Date(printDateRange.endDate), 'MMM d, yyyy') : 'Present'}
+                                                </p>
+                                            )}
+                                            <p className="text-center text-gray-400 text-xs mt-1">Generated on {format(new Date(), 'PPpp')}</p>
+                                        </div>
+
+                                        {/* Summary */}
+                                        <div className="grid grid-cols-3 gap-4 mb-6">
+                                            {(() => {
+                                                const filteredTx = company.transactions.filter(tx => {
+                                                    const txDate = new Date(tx.transactionDate)
+                                                    const start = printDateRange.startDate ? new Date(printDateRange.startDate) : null
+                                                    const end = printDateRange.endDate ? new Date(printDateRange.endDate) : null
+                                                    if (start && txDate < start) return false
+                                                    if (end && txDate > end) return false
+                                                    return true
+                                                })
+                                                const totalCredits = filteredTx.filter(t => t.type === 'Credit' && t.status === 'Completed').reduce((a, b) => a + parseFloat(b.amount), 0)
+                                                const totalPurchases = filteredTx.filter(t => t.type === 'Purchase').reduce((a, b) => a + parseFloat(b.amount), 0)
+                                                const balance = totalCredits - totalPurchases
+                                                return (
+                                                    <>
+                                                        <div className="bg-green-50 p-3 rounded text-center">
+                                                            <p className="text-xs text-green-600 uppercase font-medium">Total Credits</p>
+                                                            <p className="text-lg font-bold text-green-700">PKR {totalCredits.toLocaleString()}</p>
+                                                        </div>
+                                                        <div className="bg-red-50 p-3 rounded text-center">
+                                                            <p className="text-xs text-red-600 uppercase font-medium">Total Purchases</p>
+                                                            <p className="text-lg font-bold text-red-700">PKR {totalPurchases.toLocaleString()}</p>
+                                                        </div>
+                                                        <div className={`${balance >= 0 ? 'bg-blue-50' : 'bg-amber-50'} p-3 rounded text-center`}>
+                                                            <p className={`text-xs ${balance >= 0 ? 'text-blue-600' : 'text-amber-600'} uppercase font-medium`}>Balance</p>
+                                                            <p className={`text-lg font-bold ${balance >= 0 ? 'text-blue-700' : 'text-amber-700'}`}>PKR {balance.toLocaleString()}</p>
+                                                        </div>
+                                                    </>
+                                                )
+                                            })()}
+                                        </div>
+
+                                        {/* Transactions Table */}
+                                        <table className="min-w-full divide-y divide-gray-200 text-sm">
+                                            <thead>
+                                                <tr className="bg-gray-50">
+                                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Date</th>
+                                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Type</th>
+                                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Description</th>
+                                                    <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase">Amount</th>
+                                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
+                                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">PR Receipt</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-200">
+                                                {company.transactions
+                                                    .filter(tx => {
+                                                        const txDate = new Date(tx.transactionDate)
+                                                        const start = printDateRange.startDate ? new Date(printDateRange.startDate) : null
+                                                        const end = printDateRange.endDate ? new Date(printDateRange.endDate) : null
+                                                        if (start && txDate < start) return false
+                                                        if (end && txDate > end) return false
+                                                        return true
+                                                    })
+                                                    .map((tx) => (
+                                                    <tr key={tx.id}>
+                                                        <td className="px-3 py-2 whitespace-nowrap text-gray-600">{format(new Date(tx.transactionDate), 'MMM d, yyyy')}</td>
+                                                        <td className="px-3 py-2 whitespace-nowrap font-medium">{tx.type}</td>
+                                                        <td className="px-3 py-2 text-gray-600 max-w-xs truncate">{tx.description || '-'}</td>
+                                                        <td className={`px-3 py-2 whitespace-nowrap text-right font-semibold ${tx.type === 'Credit' ? 'text-green-600' : 'text-red-600'}`}>
+                                                            {tx.type === 'Credit' ? '+' : '-'} PKR {parseFloat(tx.amount).toLocaleString()}
+                                                        </td>
+                                                        <td className="px-3 py-2 whitespace-nowrap">
+                                                            <span className={`px-1.5 py-0.5 text-xs rounded ${tx.status === 'Completed' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                                                                {tx.status}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-3 py-2 whitespace-nowrap text-gray-500">{tx.prReceiptNumber || '-'}</td>
+                                                    </tr>
+                                                ))}
+                                                {company.transactions.filter(tx => {
+                                                    const txDate = new Date(tx.transactionDate)
+                                                    const start = printDateRange.startDate ? new Date(printDateRange.startDate) : null
+                                                    const end = printDateRange.endDate ? new Date(printDateRange.endDate) : null
+                                                    if (start && txDate < start) return false
+                                                    if (end && txDate > end) return false
+                                                    return true
+                                                }).length === 0 && (
+                                                    <tr>
+                                                        <td colSpan={6} className="px-3 py-8 text-center text-gray-500">No transactions found for the selected period.</td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                const printContent = document.getElementById('print-content')
+                                if (printContent) {
+                                    const printWindow = window.open('', '_blank')
+                                    if (printWindow) {
+                                        printWindow.document.write(`
+                                            <html>
+                                                <head>
+                                                    <title>Transaction Report - ${company.name}</title>
+                                                    <style>
+                                                        body { font-family: Arial, sans-serif; margin: 20px; }
+                                                        table { width: 100%; border-collapse: collapse; }
+                                                        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+                                                        th { background-color: #f3f4f6; font-weight: 600; }
+                                                        .text-right { text-align: right; }
+                                                        .text-center { text-align: center; }
+                                                        .font-bold { font-weight: bold; }
+                                                        .text-green { color: #15803d; }
+                                                        .text-red { color: #dc2626; }
+                                                        .bg-green { background-color: #f0fdf4; }
+                                                        .bg-red { background-color: #fef2f2; }
+                                                        .bg-blue { background-color: #eff6ff; }
+                                                        .summary-box { display: inline-block; width: 30%; padding: 12px; margin: 5px; border-radius: 8px; text-align: center; }
+                                                        @media print { body { margin: 0; } }
+                                                    </style>
+                                                </head>
+                                                <body>
+                                                    ${printContent.innerHTML}
+                                                </body>
+                                            </html>
+                                        `)
+                                        printWindow.document.close()
+                                        printWindow.print()
+                                    }
+                                }
+                            }}
+                            className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-gray-800 text-base font-medium text-white hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 sm:ml-3 sm:w-auto sm:text-sm"
+                        >
+                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                            Print Report
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setShowPrintModal(false)
+                                setPrintDateRange({ startDate: '', endDate: '' })
+                            }}
                             className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
                         >
                             Cancel
