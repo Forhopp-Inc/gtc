@@ -105,8 +105,50 @@ export async function PUT(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  const client = await db.pool.connect();
   try {
     const body = await request.json()
+    
+    await client.query('BEGIN');
+    
+    // First, fetch the current order to check for status changes
+    const currentOrderResult = await client.query(
+      'SELECT * FROM orders WHERE id = $1',
+      [params.id]
+    );
+    
+    if (currentOrderResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+    }
+    
+    const currentOrder = currentOrderResult.rows[0];
+    const previousStatus = currentOrder.status;
+    const newStatus = body.status !== undefined ? body.status : previousStatus;
+    
+    // Handle balance refund if order is being cancelled
+    if (newStatus === 'Cancelled' && previousStatus !== 'Cancelled') {
+      // If the order had remaining amount (unpaid balance), refund it from customer balance
+      const remainingAmount = parseFloat(currentOrder.remaining_amount);
+      if (remainingAmount > 0) {
+        await client.query(
+          'UPDATE customers SET balance = balance - $1 WHERE id = $2',
+          [remainingAmount, currentOrder.customer_id]
+        );
+      }
+    }
+    
+    // Handle balance restoration if order is being un-cancelled
+    if (previousStatus === 'Cancelled' && newStatus !== 'Cancelled') {
+      // Restore the remaining amount to customer balance
+      const remainingAmount = parseFloat(currentOrder.remaining_amount);
+      if (remainingAmount > 0) {
+        await client.query(
+          'UPDATE customers SET balance = balance + $1 WHERE id = $2',
+          [remainingAmount, currentOrder.customer_id]
+        );
+      }
+    }
     
     const fields = [];
     const values = [];
@@ -114,30 +156,24 @@ export async function PUT(
     
     if (body.status !== undefined) { fields.push(`status = $${idx++}`); values.push(body.status); }
     if (body.notes !== undefined) { fields.push(`notes = $${idx++}`); values.push(body.notes); }
-    // Add other fields if editable
+    if (body.orderDate !== undefined) { fields.push(`order_date = $${idx++}`); values.push(body.orderDate); }
 
     if (fields.length === 0) {
+       await client.query('ROLLBACK');
        return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
     }
 
     values.push(params.id);
     
-    const result = await db.query(`
-        UPDATE orders SET ${fields.join(', ')}
+    const result = await client.query(`
+        UPDATE orders SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP
         WHERE id = $${idx}
         RETURNING *
     `, values);
     
     const order = result.rows[0];
     
-    if (!order) {
-      return NextResponse.json({ error: 'Order not found' }, { status: 404 })
-    }
-
-    // Map keys to camelCase if needed, but for now simple return might suffice or do full mapping
-    // Since PUT returns the updated object, I should map it to match typical response structure if frontend relies on it.
-    // However, the current code just returns `order` which would be snake_case from `pg`.
-    // I should map it.
+    await client.query('COMMIT');
     
     const mappedOrder = {
         id: order.id,
@@ -149,14 +185,18 @@ export async function PUT(
         remainingAmount: order.remaining_amount,
         status: order.status,
         notes: order.notes,
+        handledBy: order.handled_by,
         createdAt: order.created_at,
         updatedAt: order.updated_at
     };
 
     return NextResponse.json(mappedOrder)
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('Error updating order:', error);
     return NextResponse.json({ error: 'Failed to update order' }, { status: 500 })
+  } finally {
+    client.release();
   }
 }
 

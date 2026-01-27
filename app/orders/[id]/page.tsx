@@ -63,7 +63,8 @@ export default function OrderDetailsPage() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [editForm, setEditForm] = useState({
     status: '',
-    notes: ''
+    notes: '',
+    orderDate: ''
   })
 
   useEffect(() => {
@@ -78,7 +79,8 @@ export default function OrderDetailsPage() {
       setOrder(data)
       setEditForm({
         status: data.status,
-        notes: data.notes || ''
+        notes: data.notes || '',
+        orderDate: data.orderDate ? new Date(data.orderDate).toISOString().slice(0, 16) : ''
       })
     } catch (error) {
       console.error('Error:', error)
@@ -261,6 +263,17 @@ export default function OrderDetailsPage() {
                         <form onSubmit={handleEditOrder} id="edit-form" className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Order Date & Time
+                                </label>
+                                <input
+                                    type="datetime-local"
+                                    className="input-field"
+                                    value={editForm.orderDate}
+                                    onChange={(e) => setEditForm({ ...editForm, orderDate: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
                                     Status
                                 </label>
                                 <select
@@ -272,6 +285,11 @@ export default function OrderDetailsPage() {
                                     <option value="Completed">Completed</option>
                                     <option value="Cancelled">Cancelled</option>
                                 </select>
+                                {editForm.status === 'Cancelled' && order.status !== 'Cancelled' && parseFloat(order.remainingAmount) > 0 && (
+                                    <p className="text-sm text-amber-600 mt-1">
+                                        ⚠️ Cancelling will refund Rs. {parseFloat(order.remainingAmount).toLocaleString()} from customer balance
+                                    </p>
+                                )}
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
