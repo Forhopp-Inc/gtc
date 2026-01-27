@@ -610,28 +610,28 @@ export default function CompanyDetailsPage() {
 
                                 {/* Print Preview */}
                                 <div className="mt-6 border border-gray-200 rounded-lg overflow-hidden" id="print-content">
-                                    <div className="bg-white p-4">
+                                    <div className="bg-white p-3">
                                         {/* Report Header - Compact Design */}
-                                        <div className="border-b-2 border-gray-900 pb-3 mb-4">
+                                        <div className="border-b-2 border-gray-900 pb-2 mb-3">
                                             <div className="flex justify-between items-start">
                                                 <div>
-                                                    <h1 className="text-xl font-bold text-gray-900">Transaction History</h1>
-                                                    <p className="text-gray-700 font-medium">{company.name}</p>
-                                                    {company.address && <p className="text-gray-500 text-xs">{company.address}</p>}
+                                                    <h1 className="text-base font-bold text-gray-900">Transaction History</h1>
+                                                    <p className="text-gray-700 font-medium text-sm">{company.name}</p>
+                                                    {company.address && <p className="text-gray-500" style={{fontSize: '9px'}}>{company.address}</p>}
                                                 </div>
-                                                <div className="text-right text-xs text-gray-500">
+                                                <div className="text-right" style={{fontSize: '9px'}}>
                                                     {(printDateRange.startDate || printDateRange.endDate) && (
                                                         <p className="font-medium text-gray-700">
                                                             {printDateRange.startDate ? format(new Date(printDateRange.startDate), 'MMM d, yyyy') : 'Start'} - {printDateRange.endDate ? format(new Date(printDateRange.endDate), 'MMM d, yyyy') : 'Present'}
                                                         </p>
                                                     )}
-                                                    <p>Generated: {format(new Date(), 'MMM d, yyyy h:mm a')}</p>
+                                                    <p className="text-gray-500">Generated: {format(new Date(), 'MMM d, yyyy h:mm a')}</p>
                                                 </div>
                                             </div>
                                         </div>
 
                                         {/* Summary - Inline */}
-                                        <div className="flex gap-4 mb-4 text-xs">
+                                        <div className="flex gap-2 mb-3" style={{fontSize: '9px'}}>
                                             {(() => {
                                                 const filteredTx = company.transactions.filter(tx => {
                                                     const txDate = new Date(tx.transactionDate)
@@ -646,78 +646,143 @@ export default function CompanyDetailsPage() {
                                                 const balance = totalCredits - totalPurchases
                                                 return (
                                                     <>
-                                                        <div className="bg-green-50 px-3 py-2 rounded flex-1">
+                                                        <div className="bg-green-50 px-2 py-1 rounded flex-1 border border-green-200">
                                                             <span className="text-green-600 font-medium">Credits: </span>
-                                                            <span className="font-bold text-green-700">PKR {totalCredits.toLocaleString()}</span>
+                                                            <span className="font-bold text-green-700">{totalCredits.toLocaleString()}</span>
                                                         </div>
-                                                        <div className="bg-red-50 px-3 py-2 rounded flex-1">
+                                                        <div className="bg-red-50 px-2 py-1 rounded flex-1 border border-red-200">
                                                             <span className="text-red-600 font-medium">Purchases: </span>
-                                                            <span className="font-bold text-red-700">PKR {totalPurchases.toLocaleString()}</span>
+                                                            <span className="font-bold text-red-700">{totalPurchases.toLocaleString()}</span>
                                                         </div>
-                                                        <div className={`${balance >= 0 ? 'bg-blue-50' : 'bg-amber-50'} px-3 py-2 rounded flex-1`}>
+                                                        <div className={`${balance >= 0 ? 'bg-blue-50 border-blue-200' : 'bg-amber-50 border-amber-200'} px-2 py-1 rounded flex-1 border`}>
                                                             <span className={`${balance >= 0 ? 'text-blue-600' : 'text-amber-600'} font-medium`}>Balance: </span>
-                                                            <span className={`font-bold ${balance >= 0 ? 'text-blue-700' : 'text-amber-700'}`}>PKR {balance.toLocaleString()}</span>
+                                                            <span className={`font-bold ${balance >= 0 ? 'text-blue-700' : 'text-amber-700'}`}>{balance.toLocaleString()}</span>
                                                         </div>
                                                     </>
                                                 )
                                             })()}
                                         </div>
 
-                                        {/* Transactions Table */}
-                                        <table className="min-w-full divide-y divide-gray-200 text-xs">
+                                        {/* Transactions Table with full borders */}
+                                        <table className="min-w-full border border-gray-400" style={{fontSize: '8px'}}>
                                             <thead>
-                                                <tr className="bg-gray-50">
-                                                    <th className="px-2 py-1.5 text-left text-xs font-semibold text-gray-600 uppercase">Date</th>
-                                                    <th className="px-2 py-1.5 text-left text-xs font-semibold text-gray-600 uppercase">Type</th>
-                                                    <th className="px-2 py-1.5 text-left text-xs font-semibold text-gray-600 uppercase">Ref #</th>
-                                                    <th className="px-2 py-1.5 text-left text-xs font-semibold text-gray-600 uppercase">Description</th>
-                                                    <th className="px-2 py-1.5 text-right text-xs font-semibold text-gray-600 uppercase">Amount</th>
-                                                    <th className="px-2 py-1.5 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
+                                                <tr className="bg-gray-100">
+                                                    <th className="border border-gray-400 px-1 py-1 text-left font-semibold text-gray-700">Date</th>
+                                                    <th className="border border-gray-400 px-1 py-1 text-left font-semibold text-gray-700">Ref #</th>
+                                                    <th className="border border-gray-400 px-1 py-1 text-left font-semibold text-gray-700">Description</th>
+                                                    <th className="border border-gray-400 px-1 py-1 text-center font-semibold text-gray-700">Qty</th>
+                                                    <th className="border border-gray-400 px-1 py-1 text-right font-semibold text-gray-700">Rate</th>
+                                                    <th className="border border-gray-400 px-1 py-1 text-right font-semibold text-gray-700">Debit</th>
+                                                    <th className="border border-gray-400 px-1 py-1 text-right font-semibold text-gray-700">Credit</th>
+                                                    <th className="border border-gray-400 px-1 py-1 text-right font-semibold text-gray-700">Balance</th>
                                                 </tr>
                                             </thead>
-                                            <tbody className="divide-y divide-gray-200">
-                                                {company.transactions
-                                                    .filter(tx => {
-                                                        const txDate = new Date(tx.transactionDate)
-                                                        const start = printDateRange.startDate ? new Date(printDateRange.startDate) : null
-                                                        const end = printDateRange.endDate ? new Date(printDateRange.endDate) : null
-                                                        if (start && txDate < start) return false
-                                                        if (end && txDate > end) return false
-                                                        return true
-                                                    })
-                                                    .map((tx) => (
-                                                    <tr key={tx.id}>
-                                                        <td className="px-2 py-1.5 whitespace-nowrap text-gray-600">{format(new Date(tx.transactionDate), 'MMM d, yy')}</td>
-                                                        <td className="px-2 py-1.5 whitespace-nowrap font-medium">{tx.type}</td>
-                                                        <td className="px-2 py-1.5 whitespace-nowrap text-gray-700">
-                                                            {tx.type === 'Purchase' 
-                                                                ? (tx.invoiceNumber ? `INV: ${tx.invoiceNumber}` : '-')
-                                                                : (tx.prReceiptNumber ? `PR: ${tx.prReceiptNumber}` : '-')
+                                            <tbody>
+                                                {(() => {
+                                                    const filteredTx = company.transactions
+                                                        .filter(tx => {
+                                                            const txDate = new Date(tx.transactionDate)
+                                                            const start = printDateRange.startDate ? new Date(printDateRange.startDate) : null
+                                                            const end = printDateRange.endDate ? new Date(printDateRange.endDate) : null
+                                                            if (start && txDate < start) return false
+                                                            if (end && txDate > end) return false
+                                                            return true
+                                                        })
+                                                        .sort((a, b) => new Date(a.transactionDate).getTime() - new Date(b.transactionDate).getTime())
+                                                    
+                                                    let runningBalance = 0
+                                                    
+                                                    // Helper function to parse purchase description
+                                                    const parsePurchaseDesc = (desc: string | null) => {
+                                                        if (!desc) return { productName: '-', qty: '-', rate: '-' }
+                                                        
+                                                        // Try to parse patterns like "Purchase of Product Name - 50 units @ 100/unit"
+                                                        // Or "Product Name x 50 @ 100"
+                                                        const patterns = [
+                                                            /Purchase of (.+?) - (\d+(?:\.\d+)?)\s*(?:units?|pcs?|kg|bags?)?\s*@\s*(\d+(?:\.\d+)?)/i,
+                                                            /(.+?) x (\d+(?:\.\d+)?)\s*@\s*(\d+(?:\.\d+)?)/i,
+                                                            /(.+?) - (\d+(?:\.\d+)?)\s*(?:units?|pcs?|kg|bags?)?\s*@\s*(\d+(?:\.\d+)?)/i,
+                                                            /Purchase of (.+?) (\d+(?:\.\d+)?)\s*@\s*(\d+(?:\.\d+)?)/i,
+                                                        ]
+                                                        
+                                                        for (const pattern of patterns) {
+                                                            const match = desc.match(pattern)
+                                                            if (match) {
+                                                                return {
+                                                                    productName: `Purchase of ${match[1].trim()}`,
+                                                                    qty: match[2],
+                                                                    rate: parseFloat(match[3]).toLocaleString()
+                                                                }
                                                             }
-                                                        </td>
-                                                        <td className="px-2 py-1.5 text-gray-600 max-w-[200px] truncate">{tx.description || '-'}</td>
-                                                        <td className={`px-2 py-1.5 whitespace-nowrap text-right font-semibold ${tx.type === 'Credit' ? 'text-green-600' : 'text-red-600'}`}>
-                                                            {tx.type === 'Credit' ? '+' : '-'} {parseFloat(tx.amount).toLocaleString()}
-                                                        </td>
-                                                        <td className="px-2 py-1.5 whitespace-nowrap">
-                                                            <span className={`px-1.5 py-0.5 text-xs rounded ${tx.status === 'Completed' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-                                                                {tx.status}
-                                                            </span>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                                {company.transactions.filter(tx => {
-                                                    const txDate = new Date(tx.transactionDate)
-                                                    const start = printDateRange.startDate ? new Date(printDateRange.startDate) : null
-                                                    const end = printDateRange.endDate ? new Date(printDateRange.endDate) : null
-                                                    if (start && txDate < start) return false
-                                                    if (end && txDate > end) return false
-                                                    return true
-                                                }).length === 0 && (
-                                                    <tr>
-                                                        <td colSpan={6} className="px-2 py-6 text-center text-gray-500">No transactions found for the selected period.</td>
-                                                    </tr>
-                                                )}
+                                                        }
+                                                        
+                                                        // If no pattern matched, try to extract just the product name
+                                                        const purchaseMatch = desc.match(/Purchase of (.+)/i)
+                                                        if (purchaseMatch) {
+                                                            return { productName: `Purchase of ${purchaseMatch[1].trim()}`, qty: '-', rate: '-' }
+                                                        }
+                                                        
+                                                        return { productName: desc, qty: '-', rate: '-' }
+                                                    }
+                                                    
+                                                    if (filteredTx.length === 0) {
+                                                        return (
+                                                            <tr>
+                                                                <td colSpan={8} className="border border-gray-400 px-2 py-4 text-center text-gray-500">
+                                                                    No transactions found for the selected period.
+                                                                </td>
+                                                            </tr>
+                                                        )
+                                                    }
+                                                    
+                                                    return filteredTx.map((tx) => {
+                                                        const amount = parseFloat(tx.amount)
+                                                        const isPurchase = tx.type === 'Purchase'
+                                                        const isCredit = tx.type === 'Credit' && tx.status === 'Completed'
+                                                        
+                                                        if (isPurchase) {
+                                                            runningBalance -= amount
+                                                        } else if (isCredit) {
+                                                            runningBalance += amount
+                                                        }
+                                                        
+                                                        const { productName, qty, rate } = isPurchase 
+                                                            ? parsePurchaseDesc(tx.description)
+                                                            : { productName: tx.description || 'Credit Payment', qty: '-', rate: '-' }
+                                                        
+                                                        return (
+                                                            <tr key={tx.id}>
+                                                                <td className="border border-gray-400 px-1 py-0.5 whitespace-nowrap text-gray-600">
+                                                                    {format(new Date(tx.transactionDate), 'dd/MM/yy')}
+                                                                </td>
+                                                                <td className="border border-gray-400 px-1 py-0.5 whitespace-nowrap text-gray-700">
+                                                                    {isPurchase 
+                                                                        ? (tx.invoiceNumber || '-')
+                                                                        : (tx.prReceiptNumber || '-')
+                                                                    }
+                                                                </td>
+                                                                <td className="border border-gray-400 px-1 py-0.5 text-gray-800" style={{maxWidth: '150px'}}>
+                                                                    {productName}
+                                                                </td>
+                                                                <td className="border border-gray-400 px-1 py-0.5 text-center text-gray-700">
+                                                                    {qty}
+                                                                </td>
+                                                                <td className="border border-gray-400 px-1 py-0.5 text-right text-gray-700">
+                                                                    {rate}
+                                                                </td>
+                                                                <td className="border border-gray-400 px-1 py-0.5 text-right font-medium text-red-600">
+                                                                    {isPurchase ? amount.toLocaleString() : ''}
+                                                                </td>
+                                                                <td className="border border-gray-400 px-1 py-0.5 text-right font-medium text-green-600">
+                                                                    {isCredit ? amount.toLocaleString() : ''}
+                                                                </td>
+                                                                <td className={`border border-gray-400 px-1 py-0.5 text-right font-semibold ${runningBalance >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                                                                    {runningBalance.toLocaleString()}
+                                                                </td>
+                                                            </tr>
+                                                        )
+                                                    })
+                                                })()}
                                             </tbody>
                                         </table>
                                     </div>
@@ -738,20 +803,52 @@ export default function CompanyDetailsPage() {
                                                 <head>
                                                     <title>Transaction Report - ${company.name}</title>
                                                     <style>
-                                                        body { font-family: Arial, sans-serif; margin: 20px; }
-                                                        table { width: 100%; border-collapse: collapse; }
-                                                        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
-                                                        th { background-color: #f3f4f6; font-weight: 600; }
+                                                        body { font-family: Arial, sans-serif; margin: 10px; font-size: 8px; }
+                                                        table { width: 100%; border-collapse: collapse; border: 1px solid #9ca3af; }
+                                                        th, td { padding: 3px 4px; text-align: left; border: 1px solid #9ca3af; }
+                                                        th { background-color: #f3f4f6; font-weight: 600; font-size: 8px; }
+                                                        td { font-size: 8px; }
                                                         .text-right { text-align: right; }
                                                         .text-center { text-align: center; }
-                                                        .font-bold { font-weight: bold; }
-                                                        .text-green { color: #15803d; }
-                                                        .text-red { color: #dc2626; }
-                                                        .bg-green { background-color: #f0fdf4; }
-                                                        .bg-red { background-color: #fef2f2; }
-                                                        .bg-blue { background-color: #eff6ff; }
-                                                        .summary-box { display: inline-block; width: 30%; padding: 12px; margin: 5px; border-radius: 8px; text-align: center; }
-                                                        @media print { body { margin: 0; } }
+                                                        .font-bold, .font-semibold { font-weight: bold; }
+                                                        .font-medium { font-weight: 500; }
+                                                        .text-green-600, .text-green-700 { color: #15803d; }
+                                                        .text-red-600, .text-red-700 { color: #dc2626; }
+                                                        .text-blue-600, .text-blue-700 { color: #1d4ed8; }
+                                                        .text-amber-600, .text-amber-700 { color: #d97706; }
+                                                        .text-gray-500 { color: #6b7280; }
+                                                        .text-gray-600 { color: #4b5563; }
+                                                        .text-gray-700 { color: #374151; }
+                                                        .text-gray-800 { color: #1f2937; }
+                                                        .text-gray-900 { color: #111827; }
+                                                        .bg-green-50 { background-color: #f0fdf4; }
+                                                        .bg-red-50 { background-color: #fef2f2; }
+                                                        .bg-blue-50 { background-color: #eff6ff; }
+                                                        .bg-amber-50 { background-color: #fffbeb; }
+                                                        .bg-gray-100 { background-color: #f3f4f6; }
+                                                        .border { border: 1px solid; }
+                                                        .border-gray-400 { border-color: #9ca3af; }
+                                                        .border-gray-900 { border-color: #111827; }
+                                                        .border-green-200 { border-color: #bbf7d0; }
+                                                        .border-red-200 { border-color: #fecaca; }
+                                                        .border-blue-200 { border-color: #bfdbfe; }
+                                                        .border-amber-200 { border-color: #fde68a; }
+                                                        .border-b-2 { border-bottom: 2px solid; }
+                                                        .rounded { border-radius: 4px; }
+                                                        .flex { display: flex; }
+                                                        .flex-1 { flex: 1; }
+                                                        .gap-2 { gap: 8px; }
+                                                        .mb-3 { margin-bottom: 12px; }
+                                                        .pb-2 { padding-bottom: 8px; }
+                                                        .px-2 { padding-left: 8px; padding-right: 8px; }
+                                                        .py-1 { padding-top: 4px; padding-bottom: 4px; }
+                                                        .p-3 { padding: 12px; }
+                                                        .whitespace-nowrap { white-space: nowrap; }
+                                                        @media print { 
+                                                            body { margin: 5px; } 
+                                                            table { page-break-inside: auto; }
+                                                            tr { page-break-inside: avoid; }
+                                                        }
                                                     </style>
                                                 </head>
                                                 <body>
