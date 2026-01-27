@@ -40,6 +40,11 @@ interface Payment {
   notes: string
 }
 
+// Helper function to check if order was paid from balance
+const isPaidFromBalance = (payments: Payment[]) => {
+  return payments.some(p => p.paymentMethod === 'Balance')
+}
+
 interface Order {
   id: string
   orderNumber: string
@@ -285,10 +290,23 @@ export default function OrderDetailsPage() {
                                     <option value="Completed">Completed</option>
                                     <option value="Cancelled">Cancelled</option>
                                 </select>
-                                {editForm.status === 'Cancelled' && order.status !== 'Cancelled' && parseFloat(order.remainingAmount) > 0 && (
-                                    <p className="text-sm text-amber-600 mt-1">
-                                        ⚠️ Cancelling will refund Rs. {parseFloat(order.remainingAmount).toLocaleString()} from customer balance
-                                    </p>
+                                {editForm.status === 'Cancelled' && order.status !== 'Cancelled' && (
+                                    (() => {
+                                        const paidFromBalance = isPaidFromBalance(order.payments);
+                                        const refundAmount = paidFromBalance 
+                                            ? parseFloat(order.totalAmount) 
+                                            : parseFloat(order.remainingAmount);
+                                        
+                                        if (refundAmount > 0) {
+                                            return (
+                                                <p className="text-sm text-amber-600 mt-1">
+                                                    ⚠️ Cancelling will refund Rs. {refundAmount.toLocaleString()} from customer balance
+                                                    {paidFromBalance && ' (paid from balance)'}
+                                                </p>
+                                            );
+                                        }
+                                        return null;
+                                    })()
                                 )}
                             </div>
                             <div>

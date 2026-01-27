@@ -164,13 +164,19 @@ export async function POST(request: Request) {
     // Calculate Paid/Remaining
     let paidAmount = 0;
     let remainingAmount = totalAmount;
+    let paidFromBalance = false;
 
     if (paymentStatus === 'Done') {
         paidAmount = totalAmount;
         remainingAmount = 0;
 
+        // Check if payment is from Balance (store credit)
+        if (paymentMethod === 'Balance') {
+            paidFromBalance = true;
+        }
+
         // Create Payment Record
-        let paymentNotes = 'Immediate payment for Order';
+        let paymentNotes = paidFromBalance ? 'Paid from customer balance' : 'Immediate payment for Order';
 
         await client.query(
             `INSERT INTO payments (customer_id, order_id, payment_date, amount, payment_method, reference_no, bank_name, notes, added_by)
@@ -185,11 +191,13 @@ export async function POST(request: Request) {
         [totalAmount, paidAmount, remainingAmount, orderId]
     );
 
-    // Update customer balance (Add the remaining debt)
-    if (remainingAmount > 0) {
+    // Update customer balance
+    // Add remaining debt OR if paid from balance (store credit), add to debt
+    if (remainingAmount > 0 || paidFromBalance) {
+        const balanceToAdd = paidFromBalance ? totalAmount : remainingAmount;
         await client.query(
             `UPDATE customers SET balance = balance + $1 WHERE id = $2`,
-            [remainingAmount, customerId]
+            [balanceToAdd, customerId]
         );
     }
 

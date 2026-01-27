@@ -62,6 +62,7 @@ export async function GET(
             'amount', t.amount,
             'fromDetails', t.from_details,
             'toDetails', t.to_details,
+            'invoiceNumber', t.invoice_number,
             'prReceiptNumber', t.pr_receipt_number,
             'prReceiptDate', t.pr_receipt_date,
             'description', t.description,

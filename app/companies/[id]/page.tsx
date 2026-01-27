@@ -22,6 +22,7 @@ interface Transaction {
     companyBank: string
     companyBankAccount: string
   } | null
+  invoiceNumber: string | null
   prReceiptNumber: string | null
   prReceiptDate: string | null
   description: string | null
@@ -609,22 +610,28 @@ export default function CompanyDetailsPage() {
 
                                 {/* Print Preview */}
                                 <div className="mt-6 border border-gray-200 rounded-lg overflow-hidden" id="print-content">
-                                    <div className="bg-white p-6">
-                                        {/* Report Header */}
-                                        <div className="border-b-2 border-gray-900 pb-4 mb-6">
-                                            <h1 className="text-2xl font-bold text-gray-900 text-center">Transaction History Report</h1>
-                                            <p className="text-center text-gray-600 mt-1">{company.name}</p>
-                                            {company.address && <p className="text-center text-gray-500 text-sm">{company.address}</p>}
-                                            {(printDateRange.startDate || printDateRange.endDate) && (
-                                                <p className="text-center text-gray-500 text-sm mt-2">
-                                                    Period: {printDateRange.startDate ? format(new Date(printDateRange.startDate), 'MMM d, yyyy') : 'Beginning'} - {printDateRange.endDate ? format(new Date(printDateRange.endDate), 'MMM d, yyyy') : 'Present'}
-                                                </p>
-                                            )}
-                                            <p className="text-center text-gray-400 text-xs mt-1">Generated on {format(new Date(), 'PPpp')}</p>
+                                    <div className="bg-white p-4">
+                                        {/* Report Header - Compact Design */}
+                                        <div className="border-b-2 border-gray-900 pb-3 mb-4">
+                                            <div className="flex justify-between items-start">
+                                                <div>
+                                                    <h1 className="text-xl font-bold text-gray-900">Transaction History</h1>
+                                                    <p className="text-gray-700 font-medium">{company.name}</p>
+                                                    {company.address && <p className="text-gray-500 text-xs">{company.address}</p>}
+                                                </div>
+                                                <div className="text-right text-xs text-gray-500">
+                                                    {(printDateRange.startDate || printDateRange.endDate) && (
+                                                        <p className="font-medium text-gray-700">
+                                                            {printDateRange.startDate ? format(new Date(printDateRange.startDate), 'MMM d, yyyy') : 'Start'} - {printDateRange.endDate ? format(new Date(printDateRange.endDate), 'MMM d, yyyy') : 'Present'}
+                                                        </p>
+                                                    )}
+                                                    <p>Generated: {format(new Date(), 'MMM d, yyyy h:mm a')}</p>
+                                                </div>
+                                            </div>
                                         </div>
 
-                                        {/* Summary */}
-                                        <div className="grid grid-cols-3 gap-4 mb-6">
+                                        {/* Summary - Inline */}
+                                        <div className="flex gap-4 mb-4 text-xs">
                                             {(() => {
                                                 const filteredTx = company.transactions.filter(tx => {
                                                     const txDate = new Date(tx.transactionDate)
@@ -639,17 +646,17 @@ export default function CompanyDetailsPage() {
                                                 const balance = totalCredits - totalPurchases
                                                 return (
                                                     <>
-                                                        <div className="bg-green-50 p-3 rounded text-center">
-                                                            <p className="text-xs text-green-600 uppercase font-medium">Total Credits</p>
-                                                            <p className="text-lg font-bold text-green-700">PKR {totalCredits.toLocaleString()}</p>
+                                                        <div className="bg-green-50 px-3 py-2 rounded flex-1">
+                                                            <span className="text-green-600 font-medium">Credits: </span>
+                                                            <span className="font-bold text-green-700">PKR {totalCredits.toLocaleString()}</span>
                                                         </div>
-                                                        <div className="bg-red-50 p-3 rounded text-center">
-                                                            <p className="text-xs text-red-600 uppercase font-medium">Total Purchases</p>
-                                                            <p className="text-lg font-bold text-red-700">PKR {totalPurchases.toLocaleString()}</p>
+                                                        <div className="bg-red-50 px-3 py-2 rounded flex-1">
+                                                            <span className="text-red-600 font-medium">Purchases: </span>
+                                                            <span className="font-bold text-red-700">PKR {totalPurchases.toLocaleString()}</span>
                                                         </div>
-                                                        <div className={`${balance >= 0 ? 'bg-blue-50' : 'bg-amber-50'} p-3 rounded text-center`}>
-                                                            <p className={`text-xs ${balance >= 0 ? 'text-blue-600' : 'text-amber-600'} uppercase font-medium`}>Balance</p>
-                                                            <p className={`text-lg font-bold ${balance >= 0 ? 'text-blue-700' : 'text-amber-700'}`}>PKR {balance.toLocaleString()}</p>
+                                                        <div className={`${balance >= 0 ? 'bg-blue-50' : 'bg-amber-50'} px-3 py-2 rounded flex-1`}>
+                                                            <span className={`${balance >= 0 ? 'text-blue-600' : 'text-amber-600'} font-medium`}>Balance: </span>
+                                                            <span className={`font-bold ${balance >= 0 ? 'text-blue-700' : 'text-amber-700'}`}>PKR {balance.toLocaleString()}</span>
                                                         </div>
                                                     </>
                                                 )
@@ -657,15 +664,15 @@ export default function CompanyDetailsPage() {
                                         </div>
 
                                         {/* Transactions Table */}
-                                        <table className="min-w-full divide-y divide-gray-200 text-sm">
+                                        <table className="min-w-full divide-y divide-gray-200 text-xs">
                                             <thead>
                                                 <tr className="bg-gray-50">
-                                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Date</th>
-                                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Type</th>
-                                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Description</th>
-                                                    <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase">Amount</th>
-                                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
-                                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">PR Receipt</th>
+                                                    <th className="px-2 py-1.5 text-left text-xs font-semibold text-gray-600 uppercase">Date</th>
+                                                    <th className="px-2 py-1.5 text-left text-xs font-semibold text-gray-600 uppercase">Type</th>
+                                                    <th className="px-2 py-1.5 text-left text-xs font-semibold text-gray-600 uppercase">Ref #</th>
+                                                    <th className="px-2 py-1.5 text-left text-xs font-semibold text-gray-600 uppercase">Description</th>
+                                                    <th className="px-2 py-1.5 text-right text-xs font-semibold text-gray-600 uppercase">Amount</th>
+                                                    <th className="px-2 py-1.5 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-gray-200">
@@ -680,18 +687,23 @@ export default function CompanyDetailsPage() {
                                                     })
                                                     .map((tx) => (
                                                     <tr key={tx.id}>
-                                                        <td className="px-3 py-2 whitespace-nowrap text-gray-600">{format(new Date(tx.transactionDate), 'MMM d, yyyy')}</td>
-                                                        <td className="px-3 py-2 whitespace-nowrap font-medium">{tx.type}</td>
-                                                        <td className="px-3 py-2 text-gray-600 max-w-xs truncate">{tx.description || '-'}</td>
-                                                        <td className={`px-3 py-2 whitespace-nowrap text-right font-semibold ${tx.type === 'Credit' ? 'text-green-600' : 'text-red-600'}`}>
-                                                            {tx.type === 'Credit' ? '+' : '-'} PKR {parseFloat(tx.amount).toLocaleString()}
+                                                        <td className="px-2 py-1.5 whitespace-nowrap text-gray-600">{format(new Date(tx.transactionDate), 'MMM d, yy')}</td>
+                                                        <td className="px-2 py-1.5 whitespace-nowrap font-medium">{tx.type}</td>
+                                                        <td className="px-2 py-1.5 whitespace-nowrap text-gray-700">
+                                                            {tx.type === 'Purchase' 
+                                                                ? (tx.invoiceNumber ? `INV: ${tx.invoiceNumber}` : '-')
+                                                                : (tx.prReceiptNumber ? `PR: ${tx.prReceiptNumber}` : '-')
+                                                            }
                                                         </td>
-                                                        <td className="px-3 py-2 whitespace-nowrap">
+                                                        <td className="px-2 py-1.5 text-gray-600 max-w-[200px] truncate">{tx.description || '-'}</td>
+                                                        <td className={`px-2 py-1.5 whitespace-nowrap text-right font-semibold ${tx.type === 'Credit' ? 'text-green-600' : 'text-red-600'}`}>
+                                                            {tx.type === 'Credit' ? '+' : '-'} {parseFloat(tx.amount).toLocaleString()}
+                                                        </td>
+                                                        <td className="px-2 py-1.5 whitespace-nowrap">
                                                             <span className={`px-1.5 py-0.5 text-xs rounded ${tx.status === 'Completed' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
                                                                 {tx.status}
                                                             </span>
                                                         </td>
-                                                        <td className="px-3 py-2 whitespace-nowrap text-gray-500">{tx.prReceiptNumber || '-'}</td>
                                                     </tr>
                                                 ))}
                                                 {company.transactions.filter(tx => {
@@ -703,7 +715,7 @@ export default function CompanyDetailsPage() {
                                                     return true
                                                 }).length === 0 && (
                                                     <tr>
-                                                        <td colSpan={6} className="px-3 py-8 text-center text-gray-500">No transactions found for the selected period.</td>
+                                                        <td colSpan={6} className="px-2 py-6 text-center text-gray-500">No transactions found for the selected period.</td>
                                                     </tr>
                                                 )}
                                             </tbody>

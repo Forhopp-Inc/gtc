@@ -126,26 +126,54 @@ export async function PUT(
     const previousStatus = currentOrder.status;
     const newStatus = body.status !== undefined ? body.status : previousStatus;
     
-    // Handle balance refund if order is being cancelled
+    // Check if order was paid from Balance (to handle it differently)
+    const paymentsResult = await client.query(
+      "SELECT * FROM payments WHERE order_id = $1 AND payment_method = 'Balance' LIMIT 1",
+      [params.id]
+    );
+    const paidFromBalance = paymentsResult.rows.length > 0;
+    
+    // Handle balance adjustment if order is being cancelled
+    // When order was created:
+    // - If unpaid: remaining_amount was ADDED to customer balance (debt)
+    // - If paid from Balance: total_amount was ADDED to customer balance (debt)
+    // When cancelled, we need to SUBTRACT it to remove the debt
     if (newStatus === 'Cancelled' && previousStatus !== 'Cancelled') {
-      // If the order had remaining amount (unpaid balance), refund it from customer balance
-      const remainingAmount = parseFloat(currentOrder.remaining_amount);
-      if (remainingAmount > 0) {
+      let balanceToSubtract = 0;
+      
+      if (paidFromBalance) {
+        // Paid from balance - subtract total amount
+        balanceToSubtract = parseFloat(currentOrder.total_amount);
+      } else {
+        // Not paid or paid with other method - subtract remaining amount
+        balanceToSubtract = parseFloat(currentOrder.remaining_amount);
+      }
+      
+      if (balanceToSubtract > 0) {
         await client.query(
           'UPDATE customers SET balance = balance - $1 WHERE id = $2',
-          [remainingAmount, currentOrder.customer_id]
+          [balanceToSubtract, currentOrder.customer_id]
         );
       }
     }
     
     // Handle balance restoration if order is being un-cancelled
+    // Re-add the debt back to customer balance
     if (previousStatus === 'Cancelled' && newStatus !== 'Cancelled') {
-      // Restore the remaining amount to customer balance
-      const remainingAmount = parseFloat(currentOrder.remaining_amount);
-      if (remainingAmount > 0) {
+      let balanceToAdd = 0;
+      
+      if (paidFromBalance) {
+        // Paid from balance - add total amount back
+        balanceToAdd = parseFloat(currentOrder.total_amount);
+      } else {
+        // Not paid or paid with other method - add remaining amount back
+        balanceToAdd = parseFloat(currentOrder.remaining_amount);
+      }
+      
+      if (balanceToAdd > 0) {
         await client.query(
           'UPDATE customers SET balance = balance + $1 WHERE id = $2',
-          [remainingAmount, currentOrder.customer_id]
+          [balanceToAdd, currentOrder.customer_id]
         );
       }
     }
