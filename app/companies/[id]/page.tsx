@@ -664,7 +664,7 @@ export default function CompanyDetailsPage() {
                                         </div>
 
                                         {/* Transactions Table with full borders */}
-                                        <table className="min-w-full border border-gray-400" style={{fontSize: '8px'}}>
+                                        <table className="min-w-full border border-gray-400" style={{fontSize: '10px'}}>
                                             <thead>
                                                 <tr className="bg-gray-100">
                                                     <th className="border border-gray-400 px-1 py-1 text-left font-semibold text-gray-700">Date</th>
@@ -822,11 +822,11 @@ export default function CompanyDetailsPage() {
                                                 <head>
                                                     <title>Transaction Report - ${company.name}</title>
                                                     <style>
-                                                        body { font-family: Arial, sans-serif; margin: 10px; font-size: 8px; }
+                                                        body { font-family: Arial, sans-serif; margin: 10px; font-size: 10px; }
                                                         table { width: 100%; border-collapse: collapse; border: 1px solid #9ca3af; }
-                                                        th, td { padding: 3px 4px; text-align: left; border: 1px solid #9ca3af; }
-                                                        th { background-color: #f3f4f6; font-weight: 600; font-size: 8px; }
-                                                        td { font-size: 8px; }
+                                                        th, td { padding: 4px 6px; text-align: left; border: 1px solid #9ca3af; }
+                                                        th { background-color: #f3f4f6; font-weight: 600; font-size: 10px; }
+                                                        td { font-size: 10px; }
                                                         .text-right { text-align: right; }
                                                         .text-center { text-align: center; }
                                                         .font-bold, .font-semibold { font-weight: bold; }

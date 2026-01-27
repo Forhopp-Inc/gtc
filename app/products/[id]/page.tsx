@@ -37,11 +37,14 @@ export default function ProductDetailsPage() {
   // Inventory Form State
   const [inventoryForm, setInventoryForm] = useState({
     stockToAdd: '',
-    buyingPrice: '',
+    totalAmount: '',
     invoiceNumber: ''
   })
 
-  const totalAmount = (parseFloat(inventoryForm.stockToAdd) || 0) * (parseFloat(inventoryForm.buyingPrice) || 0)
+  // Calculate per unit price from total amount and quantity
+  const calculatedPerUnitPrice = (parseFloat(inventoryForm.stockToAdd) || 0) > 0 
+    ? (parseFloat(inventoryForm.totalAmount) || 0) / (parseFloat(inventoryForm.stockToAdd) || 1)
+    : 0
 
   useEffect(() => {
     fetchProductDetails()
@@ -126,8 +129,8 @@ export default function ProductDetailsPage() {
     try {
       const payload = {
         stockToAdd: parseFloat(inventoryForm.stockToAdd),
-        buyingPrice: parseFloat(inventoryForm.buyingPrice),
-        totalAmount,
+        buyingPrice: calculatedPerUnitPrice,
+        totalAmount: parseFloat(inventoryForm.totalAmount),
         invoiceNumber: inventoryForm.invoiceNumber,
         companyId: product.companyId
       }
@@ -142,7 +145,7 @@ export default function ProductDetailsPage() {
         setShowInventoryModal(false)
         setInventoryForm({
             stockToAdd: '',
-            buyingPrice: '',
+            totalAmount: '',
             invoiceNumber: ''
         })
         fetchProductDetails()
@@ -444,15 +447,15 @@ export default function ProductDetailsPage() {
                                                 />
                                             </div>
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700">Buying Price (Per Unit)</label>
+                                                <label className="block text-sm font-medium text-gray-700">Total Amount (PKR)</label>
                                                 <input
                                                 type="number"
                                                 required
                                                 min="0"
                                                 step="0.01"
                                                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-                                                value={inventoryForm.buyingPrice}
-                                                onChange={(e) => setInventoryForm({...inventoryForm, buyingPrice: e.target.value})}
+                                                value={inventoryForm.totalAmount}
+                                                onChange={(e) => setInventoryForm({...inventoryForm, totalAmount: e.target.value})}
                                                 />
                                             </div>
                                         </div>
@@ -469,9 +472,12 @@ export default function ProductDetailsPage() {
 
                                         <div className="bg-gray-50 p-4 rounded-md">
                                             <div className="flex justify-between items-center">
-                                                <span className="text-sm font-medium text-gray-700">Total Amount</span>
-                                                <span className="text-xl font-bold text-gray-900">PKR {totalAmount.toLocaleString()}</span>
+                                                <span className="text-sm font-medium text-gray-700">Per Unit Price</span>
+                                                <span className="text-xl font-bold text-gray-900">PKR {calculatedPerUnitPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                             </div>
+                                            <p className="mt-2 text-xs text-gray-500">
+                                                Calculated: Total Amount ÷ Quantity = {parseFloat(inventoryForm.totalAmount || '0').toLocaleString()} ÷ {parseFloat(inventoryForm.stockToAdd || '1')} = {calculatedPerUnitPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} per unit
+                                            </p>
                                             <p className="mt-2 text-xs text-gray-500">
                                                 This will deduct from the company credit balance and create a <strong>Completed Transaction</strong>.
                                             </p>

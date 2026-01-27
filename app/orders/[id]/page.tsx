@@ -114,6 +114,30 @@ export default function OrderDetailsPage() {
     }
   }
 
+  const handleDeleteOrder = async () => {
+    if (!order) return
+    
+    if (!confirm(`Are you sure you want to delete order #${order.orderNumber}? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/orders/${order.id}`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        router.push('/orders')
+      } else {
+        const data = await response.json()
+        alert(data.error || 'Failed to delete order')
+      }
+    } catch (error) {
+      console.error('Error deleting order:', error)
+      alert('Failed to delete order')
+    }
+  }
+
   const handlePrint = () => {
     window.print()
   }
@@ -149,6 +173,13 @@ export default function OrderDetailsPage() {
                 >
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
                     Print Invoice
+                </button>
+                <button 
+                    onClick={handleDeleteOrder}
+                    className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 shadow-sm text-sm font-medium flex items-center"
+                >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    Delete
                 </button>
             </div>
         </div>

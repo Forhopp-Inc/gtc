@@ -232,19 +232,72 @@ export async function DELETE(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  const client = await db.pool.connect();
   try {
-    const result = await db.query(
-      'DELETE FROM orders WHERE id = $1 RETURNING id',
+    await client.query('BEGIN');
+    
+    // First, fetch the order to get balance info
+    const orderResult = await client.query(
+      'SELECT * FROM orders WHERE id = $1',
       [params.id]
     );
     
-    if (result.rowCount === 0) {
-       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+    if (orderResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
+    
+    const order = orderResult.rows[0];
+    
+    // Only adjust balance if order is not already cancelled
+    if (order.status !== 'Cancelled') {
+      // Check if order was paid from Balance
+      const paymentsResult = await client.query(
+        "SELECT * FROM payments WHERE order_id = $1 AND payment_method = 'Balance' LIMIT 1",
+        [params.id]
+      );
+      const paidFromBalance = paymentsResult.rows.length > 0;
+      
+      // Calculate balance to subtract from customer
+      // When order was created:
+      // - If unpaid/partial: remaining_amount was ADDED to customer balance (debt)
+      // - If paid from Balance: total_amount was ADDED to customer balance (debt)
+      // When deleted, we need to SUBTRACT it to remove the debt
+      let balanceToSubtract = 0;
+      
+      if (paidFromBalance) {
+        // Paid from balance - subtract total amount
+        balanceToSubtract = parseFloat(order.total_amount);
+      } else {
+        // Not paid or paid with other method - subtract remaining amount
+        balanceToSubtract = parseFloat(order.remaining_amount);
+      }
+      
+      if (balanceToSubtract > 0) {
+        await client.query(
+          'UPDATE customers SET balance = balance - $1 WHERE id = $2',
+          [balanceToSubtract, order.customer_id]
+        );
+      }
+    }
+    
+    // Delete associated payments first (foreign key constraint)
+    await client.query('DELETE FROM payments WHERE order_id = $1', [params.id]);
+    
+    // Delete order items (if not cascaded)
+    await client.query('DELETE FROM order_items WHERE order_id = $1', [params.id]);
+    
+    // Delete the order
+    await client.query('DELETE FROM orders WHERE id = $1', [params.id]);
+    
+    await client.query('COMMIT');
     
     return NextResponse.json({ message: 'Order deleted successfully' })
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('Error deleting order:', error);
     return NextResponse.json({ error: 'Failed to delete order' }, { status: 500 })
+  } finally {
+    client.release();
   }
 }

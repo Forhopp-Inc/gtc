@@ -40,6 +40,8 @@ export default function ExpensesPage() {
   const [categoryFilter, setCategoryFilter] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+  const [showPrintModal, setShowPrintModal] = useState(false)
+  const [printDateRange, setPrintDateRange] = useState({ startDate: '', endDate: '' })
 
   useEffect(() => {
     fetchExpenses()
@@ -135,26 +137,35 @@ export default function ExpensesPage() {
           <h1 className="text-3xl font-bold text-gray-900">Expenses</h1>
           <p className="text-gray-600 mt-2">Track business expenses</p>
         </div>
-        <button
-          onClick={() => {
-            if (showForm) {
-                setShowForm(false)
-                setEditingExpense(null)
-                setFormData({
-                  category: 'Other',
-                  description: '',
-                  amount: '',
-                  expenseDate: new Date().toISOString().split('T')[0],
-                  notes: '',
-                })
-            } else {
-                setShowForm(true)
-            }
-          }}
-          className="btn-primary"
-        >
-          {showForm ? 'Cancel' : '+ Add Expense'}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowPrintModal(true)}
+            className="flex items-center gap-1.5 bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-md shadow-sm transition-all text-sm font-medium"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+            Print Report
+          </button>
+          <button
+            onClick={() => {
+              if (showForm) {
+                  setShowForm(false)
+                  setEditingExpense(null)
+                  setFormData({
+                    category: 'Other',
+                    description: '',
+                    amount: '',
+                    expenseDate: new Date().toISOString().split('T')[0],
+                    notes: '',
+                  })
+              } else {
+                  setShowForm(true)
+              }
+            }}
+            className="btn-primary"
+          >
+            {showForm ? 'Cancel' : '+ Add Expense'}
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -392,6 +403,230 @@ export default function ExpensesPage() {
       {expenses.length === 0 && (
         <div className="card text-center py-12 mt-6">
           <p className="text-gray-500">No expenses found. Add your first expense to get started.</p>
+        </div>
+      )}
+
+      {/* Print Modal */}
+      {showPrintModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+            <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={() => setShowPrintModal(false)}></div>
+                <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+                    <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                        <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Print Expenses Report</h3>
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Start Date</label>
+                                <input
+                                    type="date"
+                                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                                    value={printDateRange.startDate}
+                                    onChange={(e) => setPrintDateRange({...printDateRange, startDate: e.target.value})}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">End Date</label>
+                                <input
+                                    type="date"
+                                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                                    value={printDateRange.endDate}
+                                    onChange={(e) => setPrintDateRange({...printDateRange, endDate: e.target.value})}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Print Preview */}
+                        <div className="border border-gray-200 rounded-lg overflow-hidden" id="expenses-print-content">
+                            <div className="bg-white p-3">
+                                <div className="border-b-2 border-gray-900 pb-2 mb-3">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <h1 className="text-base font-bold text-gray-900">Expenses Report</h1>
+                                            <p className="text-gray-700 font-medium text-sm">Ghous Trading Company</p>
+                                        </div>
+                                        <div className="text-right" style={{fontSize: '9px'}}>
+                                            {(printDateRange.startDate || printDateRange.endDate) && (
+                                                <p className="font-medium text-gray-700">
+                                                    {printDateRange.startDate ? format(new Date(printDateRange.startDate), 'MMM d, yyyy') : 'Start'} - {printDateRange.endDate ? format(new Date(printDateRange.endDate), 'MMM d, yyyy') : 'Present'}
+                                                </p>
+                                            )}
+                                            <p className="text-gray-500">Generated: {format(new Date(), 'MMM d, yyyy h:mm a')}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Summary */}
+                                {(() => {
+                                    const filteredExpenses = expenses.filter(exp => {
+                                        const expDate = new Date(exp.expenseDate).toISOString().split('T')[0]
+                                        if (printDateRange.startDate && expDate < printDateRange.startDate) return false
+                                        if (printDateRange.endDate && expDate > printDateRange.endDate) return false
+                                        return true
+                                    })
+                                    const total = filteredExpenses.reduce((a, b) => a + parseFloat(b.amount), 0)
+                                    const byCategory = filteredExpenses.reduce((acc, exp) => {
+                                        acc[exp.category] = (acc[exp.category] || 0) + parseFloat(exp.amount)
+                                        return acc
+                                    }, {} as Record<string, number>)
+
+                                    return (
+                                        <>
+                                            <div className="flex gap-2 mb-3" style={{fontSize: '9px'}}>
+                                                <div className="bg-red-50 px-2 py-1 rounded flex-1 border border-red-200">
+                                                    <span className="text-red-600 font-medium">Total Expenses: </span>
+                                                    <span className="font-bold text-red-700">Rs. {total.toLocaleString()}</span>
+                                                </div>
+                                                <div className="bg-blue-50 px-2 py-1 rounded flex-1 border border-blue-200">
+                                                    <span className="text-blue-600 font-medium">Records: </span>
+                                                    <span className="font-bold text-blue-700">{filteredExpenses.length}</span>
+                                                </div>
+                                            </div>
+
+                                            <table className="min-w-full border border-gray-400" style={{fontSize: '10px'}}>
+                                                <thead>
+                                                    <tr className="bg-gray-100">
+                                                        <th className="border border-gray-400 px-2 py-1 text-left font-semibold text-gray-700">Date</th>
+                                                        <th className="border border-gray-400 px-2 py-1 text-left font-semibold text-gray-700">Category</th>
+                                                        <th className="border border-gray-400 px-2 py-1 text-left font-semibold text-gray-700">Description</th>
+                                                        <th className="border border-gray-400 px-2 py-1 text-right font-semibold text-gray-700">Amount</th>
+                                                        <th className="border border-gray-400 px-2 py-1 text-right font-semibold text-gray-700">Balance</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {(() => {
+                                                        let runningTotal = 0
+                                                        return filteredExpenses
+                                                            .sort((a, b) => new Date(a.expenseDate).getTime() - new Date(b.expenseDate).getTime())
+                                                            .map((exp) => {
+                                                                runningTotal += parseFloat(exp.amount)
+                                                                return (
+                                                                    <tr key={exp.id}>
+                                                                        <td className="border border-gray-400 px-2 py-1 whitespace-nowrap text-gray-600">
+                                                                            {format(new Date(exp.expenseDate), 'dd/MM/yy')}
+                                                                        </td>
+                                                                        <td className="border border-gray-400 px-2 py-1 whitespace-nowrap text-gray-700">
+                                                                            {exp.category}
+                                                                        </td>
+                                                                        <td className="border border-gray-400 px-2 py-1 text-gray-800">
+                                                                            {exp.description}
+                                                                        </td>
+                                                                        <td className="border border-gray-400 px-2 py-1 text-right font-medium text-red-600">
+                                                                            {parseFloat(exp.amount).toLocaleString()}
+                                                                        </td>
+                                                                        <td className="border border-gray-400 px-2 py-1 text-right font-semibold text-red-700">
+                                                                            {runningTotal.toLocaleString()}
+                                                                        </td>
+                                                                    </tr>
+                                                                )
+                                                            })
+                                                    })()}
+                                                    {filteredExpenses.length === 0 && (
+                                                        <tr>
+                                                            <td colSpan={5} className="border border-gray-400 px-2 py-4 text-center text-gray-500">
+                                                                No expenses found for the selected period.
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </tbody>
+                                            </table>
+
+                                            {/* Category Summary */}
+                                            {Object.keys(byCategory).length > 0 && (
+                                                <div className="mt-3">
+                                                    <p className="text-xs font-semibold text-gray-700 mb-1">By Category:</p>
+                                                    <div className="grid grid-cols-4 gap-1" style={{fontSize: '9px'}}>
+                                                        {Object.entries(byCategory).map(([cat, amt]) => (
+                                                            <div key={cat} className="bg-gray-50 px-2 py-1 rounded border">
+                                                                <span className="text-gray-600">{cat}: </span>
+                                                                <span className="font-bold text-gray-800">Rs. {amt.toLocaleString()}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </>
+                                    )
+                                })()}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                const printContent = document.getElementById('expenses-print-content')
+                                if (printContent) {
+                                    const printWindow = window.open('', '_blank')
+                                    if (printWindow) {
+                                        printWindow.document.write(`
+                                            <html>
+                                                <head>
+                                                    <title>Expenses Report</title>
+                                                    <style>
+                                                        body { font-family: Arial, sans-serif; margin: 10px; font-size: 10px; }
+                                                        table { width: 100%; border-collapse: collapse; border: 1px solid #9ca3af; }
+                                                        th, td { padding: 4px 6px; text-align: left; border: 1px solid #9ca3af; }
+                                                        th { background-color: #f3f4f6; font-weight: 600; }
+                                                        .text-right { text-align: right; }
+                                                        .font-bold, .font-semibold { font-weight: bold; }
+                                                        .text-red-600, .text-red-700 { color: #dc2626; }
+                                                        .text-blue-600, .text-blue-700 { color: #1d4ed8; }
+                                                        .text-gray-500 { color: #6b7280; }
+                                                        .text-gray-600 { color: #4b5563; }
+                                                        .text-gray-700 { color: #374151; }
+                                                        .text-gray-800 { color: #1f2937; }
+                                                        .bg-red-50 { background-color: #fef2f2; }
+                                                        .bg-blue-50 { background-color: #eff6ff; }
+                                                        .bg-gray-50 { background-color: #f9fafb; }
+                                                        .bg-gray-100 { background-color: #f3f4f6; }
+                                                        .border { border: 1px solid #d1d5db; }
+                                                        .border-gray-400 { border-color: #9ca3af; }
+                                                        .border-red-200 { border-color: #fecaca; }
+                                                        .border-blue-200 { border-color: #bfdbfe; }
+                                                        .rounded { border-radius: 4px; }
+                                                        .flex { display: flex; }
+                                                        .flex-1 { flex: 1; }
+                                                        .gap-2 { gap: 8px; }
+                                                        .gap-1 { gap: 4px; }
+                                                        .grid { display: grid; }
+                                                        .grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
+                                                        .mb-3 { margin-bottom: 12px; }
+                                                        .mt-3 { margin-top: 12px; }
+                                                        .mb-1 { margin-bottom: 4px; }
+                                                        .px-2 { padding-left: 8px; padding-right: 8px; }
+                                                        .py-1 { padding-top: 4px; padding-bottom: 4px; }
+                                                        .p-3 { padding: 12px; }
+                                                        @media print { body { margin: 5px; } }
+                                                    </style>
+                                                </head>
+                                                <body>
+                                                    ${printContent.innerHTML}
+                                                </body>
+                                            </html>
+                                        `)
+                                        printWindow.document.close()
+                                        printWindow.print()
+                                    }
+                                }
+                            }}
+                            className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-gray-800 text-base font-medium text-white hover:bg-gray-900 sm:ml-3 sm:w-auto sm:text-sm"
+                        >
+                            Print Report
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setShowPrintModal(false)
+                                setPrintDateRange({ startDate: '', endDate: '' })
+                            }}
+                            className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
       )}
     </div>
