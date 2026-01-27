@@ -696,12 +696,26 @@ export default function CompanyDetailsPage() {
                                                     const parsePurchaseDesc = (desc: string | null) => {
                                                         if (!desc) return { productName: '-', qty: '-', rate: '-' }
                                                         
-                                                        // Try to parse patterns like "Purchase of Product Name - 50 units @ 100/unit"
-                                                        // Or "Product Name x 50 @ 100"
+                                                        // Pattern: "Inventory Purchase: 60 units of Hi Sixer at 921.6/unit. 55,296 pending"
+                                                        const inventoryPattern = /Inventory Purchase:\s*(\d+(?:\.\d+)?)\s*units?\s*of\s+(.+?)\s+at\s+(\d+(?:,\d+)*(?:\.\d+)?)/i
+                                                        const inventoryMatch = desc.match(inventoryPattern)
+                                                        if (inventoryMatch) {
+                                                            return {
+                                                                productName: `Inventory Purchase: ${inventoryMatch[2].trim()}`,
+                                                                qty: inventoryMatch[1],
+                                                                rate: inventoryMatch[3].replace(',', '')
+                                                            }
+                                                        }
+                                                        
+                                                        // Try other patterns
                                                         const patterns = [
+                                                            // "Purchase of Product Name - 50 units @ 100/unit"
                                                             /Purchase of (.+?) - (\d+(?:\.\d+)?)\s*(?:units?|pcs?|kg|bags?)?\s*@\s*(\d+(?:\.\d+)?)/i,
+                                                            // "Product Name x 50 @ 100"
                                                             /(.+?) x (\d+(?:\.\d+)?)\s*@\s*(\d+(?:\.\d+)?)/i,
+                                                            // "Product Name - 50 units @ 100"
                                                             /(.+?) - (\d+(?:\.\d+)?)\s*(?:units?|pcs?|kg|bags?)?\s*@\s*(\d+(?:\.\d+)?)/i,
+                                                            // "Purchase of Product Name 50 @ 100"
                                                             /Purchase of (.+?) (\d+(?:\.\d+)?)\s*@\s*(\d+(?:\.\d+)?)/i,
                                                         ]
                                                         
@@ -716,7 +730,12 @@ export default function CompanyDetailsPage() {
                                                             }
                                                         }
                                                         
-                                                        // If no pattern matched, try to extract just the product name
+                                                        // If no pattern matched, try to extract just the product name from "Inventory Purchase: ..." or "Purchase of ..."
+                                                        const inventorySimple = desc.match(/Inventory Purchase:\s*(.+)/i)
+                                                        if (inventorySimple) {
+                                                            return { productName: `Inventory Purchase: ${inventorySimple[1].split('.')[0].trim()}`, qty: '-', rate: '-' }
+                                                        }
+                                                        
                                                         const purchaseMatch = desc.match(/Purchase of (.+)/i)
                                                         if (purchaseMatch) {
                                                             return { productName: `Purchase of ${purchaseMatch[1].trim()}`, qty: '-', rate: '-' }
