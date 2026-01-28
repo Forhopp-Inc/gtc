@@ -29,6 +29,7 @@ export default function ProductsPage() {
   const [showProductModal, setShowProductModal] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [productError, setProductError] = useState<string | null>(null)
   const [productFormData, setProductFormData] = useState({
     name: '',
     description: '',
@@ -82,6 +83,7 @@ export default function ProductsPage() {
   const openAddProductModal = () => {
     setIsEditing(false)
     setEditingId(null)
+    setProductError(null)
     setProductFormData({ name: '', description: '', category: 'Pesticide', companyId: '' })
     setShowProductModal(true)
   }
@@ -90,6 +92,7 @@ export default function ProductsPage() {
     e.stopPropagation() // Prevent row click navigation
     setIsEditing(true)
     setEditingId(product.id)
+    setProductError(null)
     setProductFormData({
       name: product.name,
       description: product.description || '',
@@ -101,6 +104,7 @@ export default function ProductsPage() {
 
   const handleProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setProductError(null)
     try {
       const url = isEditing ? `/api/products/${editingId}` : '/api/products'
       const method = isEditing ? 'PUT' : 'POST'
@@ -114,9 +118,13 @@ export default function ProductsPage() {
       if (response.ok) {
         setShowProductModal(false)
         fetchProducts()
+      } else {
+        const data = await response.json()
+        setProductError(data.error || 'Failed to save product')
       }
     } catch (error) {
       console.error('Failed to save product:', error)
+      setProductError('Failed to save product')
     }
   }
 
@@ -333,6 +341,11 @@ export default function ProductsPage() {
             <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
             <div className="relative bg-white rounded-lg max-w-lg w-full p-6 shadow-xl" onClick={e => e.stopPropagation()}>
               <h2 className="text-xl font-semibold mb-4">{isEditing ? 'Edit Product' : 'Add New Product'}</h2>
+              {productError && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                  <p className="text-sm text-red-600">{productError}</p>
+                </div>
+              )}
               <form onSubmit={handleProductSubmit} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">

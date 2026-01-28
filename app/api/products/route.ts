@@ -43,7 +43,20 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { name, description, category, companyId, stockQuantity = 0 } = body
     
-    // First create product
+    // Check if product with same name already exists for this company
+    const existingProduct = await db.query(
+      `SELECT id, name FROM products WHERE LOWER(name) = LOWER($1) AND company_id = $2`,
+      [name, companyId]
+    );
+
+    if (existingProduct.rows.length > 0) {
+      return NextResponse.json(
+        { error: `Product "${name}" already exists for this company` },
+        { status: 409 }
+      );
+    }
+    
+    // Create product
     const result = await db.query(
       `INSERT INTO products (name, description, category, company_id, stock_quantity)
        VALUES ($1, $2, $3, $4, $5)
