@@ -95,6 +95,10 @@ export default function OrdersPage() {
     cnic: ''
   })
 
+  // Loading states to prevent double-clicks
+  const [isCreatingOrder, setIsCreatingOrder] = useState(false)
+  const [isCreatingCustomer, setIsCreatingCustomer] = useState(false)
+
   useEffect(() => {
     fetchOrders()
     fetchCustomers()
@@ -160,6 +164,9 @@ export default function OrdersPage() {
 
   const handleCreateCustomer = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (isCreatingCustomer) return
+    
+    setIsCreatingCustomer(true)
     try {
       const response = await fetch('/api/customers', {
         method: 'POST',
@@ -177,11 +184,14 @@ export default function OrdersPage() {
     } catch (error) {
       console.error('Failed to create customer:', error)
       alert('Failed to create customer')
+    } finally {
+      setIsCreatingCustomer(false)
     }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (isCreatingOrder) return
     
     // Validate order items
     if (orderItems.some(item => !item.productId || item.quantity <= 0)) {
@@ -189,6 +199,7 @@ export default function OrdersPage() {
       return
     }
 
+    setIsCreatingOrder(true)
     try {
       // Add default buyingPrice (0) to payload if API expects it
       const itemsWithBuyingPrice = orderItems.map(item => ({
@@ -232,6 +243,8 @@ export default function OrdersPage() {
     } catch (error) {
       console.error('Failed to create order:', error)
       alert('Failed to create order')
+    } finally {
+      setIsCreatingOrder(false)
     }
   }
 
@@ -524,13 +537,28 @@ export default function OrdersPage() {
             </div>
 
             <div className="flex gap-2">
-              <button type="submit" className="btn-primary">
-                Create Order
+              <button 
+                type="submit" 
+                className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                disabled={isCreatingOrder}
+              >
+                {isCreatingOrder ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Creating...
+                  </>
+                ) : (
+                  'Create Order'
+                )}
               </button>
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
                 className="btn-secondary"
+                disabled={isCreatingOrder}
               >
                 Cancel
               </button>
@@ -922,14 +950,26 @@ export default function OrdersPage() {
                         <button
                             type="submit"
                             form="new-customer-form"
-                            className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
+                            disabled={isCreatingCustomer}
+                            className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            Create & Select
+                            {isCreatingCustomer ? (
+                                <>
+                                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Creating...
+                                </>
+                            ) : (
+                                'Create & Select'
+                            )}
                         </button>
                         <button
                             type="button"
                             onClick={() => setShowCustomerModal(false)}
-                            className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                            disabled={isCreatingCustomer}
+                            className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             Cancel
                         </button>
