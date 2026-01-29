@@ -13,6 +13,7 @@ export async function GET(request: Request) {
         p.description, 
         p.category, 
         p.stock_quantity as "stockQuantity",
+        p.price,
         p.company_id as "companyId", 
         p.created_at as "createdAt", 
         p.updated_at as "updatedAt",

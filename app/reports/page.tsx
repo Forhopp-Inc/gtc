@@ -290,17 +290,17 @@ export default function ReportsPage() {
             <p className="text-xl font-bold text-gray-900">Rs. {stats.financial.totalCost.toLocaleString()}</p>
             <p className="text-xs text-gray-500 mt-1">Cost of sold items</p>
           </div>
-          <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-red-500">
-            <h3 className="text-xs font-medium text-gray-500 mb-1 uppercase">Expenses</h3>
-            <p className="text-xl font-bold text-gray-900">Rs. {stats.financial.totalExpenses.toLocaleString()}</p>
-            <p className="text-xs text-gray-500 mt-1">Operating costs</p>
-          </div>
           <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-purple-500">
             <h3 className="text-xs font-medium text-gray-500 mb-1 uppercase">Gross Profit</h3>
             <p className={`text-xl font-bold ${stats.financial.grossProfit >= 0 ? 'text-purple-600' : 'text-red-600'}`}>
               Rs. {stats.financial.grossProfit.toLocaleString()}
             </p>
             <p className="text-xs text-gray-500 mt-1">Revenue - COGS</p>
+          </div>
+          <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-red-500">
+            <h3 className="text-xs font-medium text-gray-500 mb-1 uppercase">Expenses</h3>
+            <p className="text-xl font-bold text-gray-900">Rs. {stats.financial.totalExpenses.toLocaleString()}</p>
+            <p className="text-xs text-gray-500 mt-1">Operating costs</p>
           </div>
           <div className={`bg-white p-4 rounded-lg shadow-sm border-l-4 ${stats.financial.netProfit >= 0 ? 'border-green-500' : 'border-red-600'}`}>
             <h3 className="text-xs font-medium text-gray-500 mb-1 uppercase">Net Profit</h3>

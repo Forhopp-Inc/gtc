@@ -14,6 +14,7 @@ interface Product {
   description: string | null
   category: string
   stockQuantity: number
+  price: number
   company: Company
   createdAt: string
   companyId: string // Ensure this is available if needed for editing
@@ -50,6 +51,11 @@ export default function ProductsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('')
   const [selectedCompany, setSelectedCompany] = useState('')
+
+  // Calculate total inventory value (stock_quantity * price)
+  const totalInventoryValue = products.reduce((total, product) => {
+    return total + ((product.stockQuantity || 0) * (product.price || 0))
+  }, 0)
 
   useEffect(() => {
     fetchProducts()
@@ -203,17 +209,23 @@ export default function ProductsPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-6 flex justify-between items-center">
+      <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Products</h1>
           <p className="text-gray-600 mt-2">Browse and manage product inventory</p>
         </div>
-        <button
-          onClick={openAddProductModal}
-          className="btn-primary"
-        >
-          + Add Product
-        </button>
+        <div className="flex items-center gap-4">
+          <div className="bg-purple-50 border border-purple-200 rounded-lg px-4 py-2">
+            <p className="text-xs text-purple-600 font-medium uppercase">Inventory Value</p>
+            <p className="text-lg font-bold text-purple-700">Rs. {totalInventoryValue.toLocaleString()}</p>
+          </div>
+          <button
+            onClick={openAddProductModal}
+            className="btn-primary"
+          >
+            + Add Product
+          </button>
+        </div>
       </div>
 
       {/* Filters */}

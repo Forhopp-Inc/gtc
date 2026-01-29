@@ -379,6 +379,67 @@ export default function OrdersPage() {
         </div>
       </div>
 
+      {/* Stats Cards */}
+      {(() => {
+        const filteredOrders = orders.filter(order => {
+          const matchesSearch = 
+            order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            order.customer.name.toLowerCase().includes(searchQuery.toLowerCase());
+          
+          const orderDateStr = new Date(order.orderDate).toISOString().split('T')[0];
+          let matchesDate = true;
+          if (startDate && endDate) {
+              matchesDate = orderDateStr >= startDate && orderDateStr <= endDate;
+          } else if (startDate) {
+              matchesDate = orderDateStr >= startDate;
+          } else if (endDate) {
+              matchesDate = orderDateStr <= endDate;
+          }
+          
+          let matchesPayment = true;
+          if (paymentFilter === 'paid') matchesPayment = Number(order.remainingAmount) === 0;
+          else if (paymentFilter === 'unpaid') matchesPayment = Number(order.remainingAmount) > 0;
+          
+          return matchesSearch && matchesDate && matchesPayment;
+        });
+        
+        const totalSales = filteredOrders.reduce((sum, o) => sum + parseFloat(o.totalAmount), 0);
+        const totalCollected = filteredOrders.reduce((sum, o) => sum + parseFloat(o.paidAmount), 0);
+        const totalPending = filteredOrders.reduce((sum, o) => sum + parseFloat(o.remainingAmount), 0);
+        const completedOrders = filteredOrders.filter(o => o.status === 'Completed').length;
+        const pendingOrders = filteredOrders.filter(o => o.status === 'Pending').length;
+        
+        return (
+          <div className="mb-6 grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-blue-500">
+              <p className="text-xs font-medium text-gray-500 uppercase">Total Sales</p>
+              <p className="text-xl font-bold text-gray-900">Rs. {totalSales.toLocaleString()}</p>
+              <p className="text-xs text-gray-500 mt-1">{filteredOrders.length} orders</p>
+            </div>
+            <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-green-500">
+              <p className="text-xs font-medium text-gray-500 uppercase">Collected</p>
+              <p className="text-xl font-bold text-green-600">Rs. {totalCollected.toLocaleString()}</p>
+              <p className="text-xs text-gray-500 mt-1">{totalSales > 0 ? ((totalCollected / totalSales) * 100).toFixed(0) : 0}% of sales</p>
+            </div>
+            <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-amber-500">
+              <p className="text-xs font-medium text-gray-500 uppercase">Pending</p>
+              <p className="text-xl font-bold text-amber-600">Rs. {totalPending.toLocaleString()}</p>
+              <p className="text-xs text-gray-500 mt-1">Receivables</p>
+            </div>
+            <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-emerald-500">
+              <p className="text-xs font-medium text-gray-500 uppercase">Completed</p>
+              <p className="text-xl font-bold text-emerald-600">{completedOrders}</p>
+              <p className="text-xs text-gray-500 mt-1">Orders</p>
+            </div>
+            <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-yellow-500">
+              <p className="text-xs font-medium text-gray-500 uppercase">Pending</p>
+              <p className="text-xl font-bold text-yellow-600">{pendingOrders}</p>
+              <p className="text-xs text-gray-500 mt-1">Orders</p>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Filters */}
       <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-4 rounded-lg shadow-sm border border-gray-100">
         <input 
