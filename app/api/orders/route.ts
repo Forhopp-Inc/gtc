@@ -149,22 +149,24 @@ export async function POST(request: Request) {
     // Create order items
     for (const item of orderItems) {
         const itemQuantity = parseFloat(item.quantity);
-        const itemBuyingPrice = parseFloat(item.buyingPrice);
         const itemSellingPrice = parseFloat(item.sellingPrice);
         
-        const itemTotalCost = itemQuantity * itemBuyingPrice;
-        const itemTotalRevenue = itemQuantity * itemSellingPrice;
-        const itemProfit = itemTotalRevenue - itemTotalCost;
-
-        // Get product details to store with order item (for preservation when product is deleted)
+        // Fetch the current buying price from product table
         const productResult = await client.query(`
-            SELECT p.name as product_name, p.category as product_category, c.name as company_name
+            SELECT p.name as product_name, p.category as product_category, p.price as buying_price, c.name as company_name
             FROM products p
             JOIN companies c ON p.company_id = c.id
             WHERE p.id = $1
         `, [item.productId]);
         
-        const productDetails = productResult.rows[0] || { product_name: 'Unknown Product', product_category: '', company_name: '' };
+        const productDetails = productResult.rows[0] || { product_name: 'Unknown Product', product_category: '', company_name: '', buying_price: 0 };
+        
+        // Use buying price from product table, fallback to item.buyingPrice if provided, then to 0
+        const itemBuyingPrice = parseFloat(productDetails.buying_price) || parseFloat(item.buyingPrice) || 0;
+        
+        const itemTotalCost = itemQuantity * itemBuyingPrice;
+        const itemTotalRevenue = itemQuantity * itemSellingPrice;
+        const itemProfit = itemTotalRevenue - itemTotalCost;
 
         await client.query(
             `INSERT INTO order_items (order_id, product_id, quantity, buying_price, selling_price, total_cost, total_revenue, profit, product_name, product_category, company_name)
