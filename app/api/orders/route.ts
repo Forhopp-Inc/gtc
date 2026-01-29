@@ -121,10 +121,14 @@ export async function POST(request: Request) {
 
     await client.query('BEGIN');
 
-    // Generate order number
-    const countResult = await client.query('SELECT count(*) FROM orders');
-    const orderCount = parseInt(countResult.rows[0].count);
-    const orderNumber = `ORD-${String(orderCount + 1).padStart(6, '0')}`;
+    // Generate order number using MAX to avoid duplicates after deletions
+    const maxResult = await client.query(`
+      SELECT COALESCE(MAX(CAST(SUBSTRING(order_number FROM 5) AS INTEGER)), 0) as max_num 
+      FROM orders 
+      WHERE order_number LIKE 'ORD-%'
+    `);
+    const maxOrderNum = parseInt(maxResult.rows[0].max_num) || 0;
+    const orderNumber = `ORD-${String(maxOrderNum + 1).padStart(6, '0')}`;
 
     // Determine Status
     const status = 'Completed';
