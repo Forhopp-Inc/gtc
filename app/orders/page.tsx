@@ -61,7 +61,8 @@ export default function OrdersPage() {
     bankName: '',
     transactionNumber: '',
     collectedBy: '',
-    orderHandleBy: ''
+    orderHandleBy: '',
+    partialAmount: ''
   })
 
   // Filter States
@@ -233,12 +234,17 @@ export default function OrdersPage() {
             bankName: '',
             transactionNumber: '',
             collectedBy: '',
-            orderHandleBy: ''
+            orderHandleBy: '',
+            partialAmount: ''
         })
         setOrderItems([{ productId: '', quantity: 1, sellingPrice: 0 }])
         setShowForm(false)
         fetchOrders()
         alert('Order created successfully!')
+      } else {
+        const errorData = await response.json()
+        console.error('Order creation failed:', errorData)
+        alert(`Failed to create order: ${errorData.error || 'Unknown error'}`)
       }
     } catch (error) {
       console.error('Failed to create order:', error)
@@ -370,22 +376,57 @@ export default function OrdersPage() {
             </div>
 
             {/* Payment Options */}
-            <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Payment Status
-                </label>
-                <select
-                  className="input-field"
-                  value={formData.paymentStatus}
-                  onChange={(e) => setFormData({ ...formData, paymentStatus: e.target.value })}
-                >
-                  <option value="Pending">From Balance</option>
-                  <option value="Done">Paid</option>
-                </select>
+            <div className="bg-gray-50 p-4 rounded space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Payment Status
+                  </label>
+                  <select
+                    className="input-field"
+                    value={formData.paymentStatus}
+                    onChange={(e) => setFormData({ ...formData, paymentStatus: e.target.value, partialAmount: '' })}
+                  >
+                    <option value="Pending">From Balance (No Payment)</option>
+                    <option value="Partial">Partial Payment</option>
+                    <option value="Done">Fully Paid</option>
+                  </select>
+                </div>
+
+                {/* Order Total Preview */}
+                <div className="flex items-end">
+                  <div className="bg-white p-3 rounded border border-gray-200 w-full">
+                    <p className="text-xs text-gray-500">Order Total</p>
+                    <p className="text-lg font-bold text-gray-900">
+                      Rs. {orderItems.reduce((sum, item) => sum + (item.quantity * item.sellingPrice), 0).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
               </div>
+
+              {/* Partial Payment Amount */}
+              {formData.paymentStatus === 'Partial' && (
+                <div className="bg-blue-50 p-3 rounded border border-blue-200">
+                  <label className="block text-sm font-medium text-blue-800 mb-1">
+                    Partial Payment Amount *
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    max={orderItems.reduce((sum, item) => sum + (item.quantity * item.sellingPrice), 0) - 1}
+                    className="input-field"
+                    placeholder="Enter amount to pay now"
+                    value={formData.partialAmount}
+                    onChange={(e) => setFormData({ ...formData, partialAmount: e.target.value })}
+                  />
+                  <p className="text-xs text-blue-600 mt-1">
+                    Remaining balance of Rs. {(orderItems.reduce((sum, item) => sum + (item.quantity * item.sellingPrice), 0) - (parseFloat(formData.partialAmount) || 0)).toLocaleString()} will be added to customer's account
+                  </p>
+                </div>
+              )}
               
-              {formData.paymentStatus === 'Done' && (
+              {(formData.paymentStatus === 'Done' || formData.paymentStatus === 'Partial') && (
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">

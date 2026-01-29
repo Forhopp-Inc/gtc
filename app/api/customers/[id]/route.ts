@@ -150,8 +150,28 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Check if customer has any orders or payments
+    const checkResult = await db.query(`
+      SELECT 
+        (SELECT COUNT(*) FROM orders WHERE customer_id = $1) as order_count,
+        (SELECT COUNT(*) FROM payments WHERE customer_id = $1) as payment_count
+    `, [params.id]);
+    
+    const { order_count, payment_count } = checkResult.rows[0];
+    
+    if (parseInt(order_count) > 0 || parseInt(payment_count) > 0) {
+      return NextResponse.json({ 
+        error: 'Cannot delete customer with existing orders or payments',
+        details: {
+          orders: parseInt(order_count),
+          payments: parseInt(payment_count)
+        },
+        message: `This customer has ${order_count} order(s) and ${payment_count} payment(s). Delete them first or transfer to another customer.`
+      }, { status: 400 })
+    }
+    
     const result = await db.query(
-      'DELETE FROM customers WHERE id = $1 RETURNING id',
+      'DELETE FROM customers WHERE id = $1 RETURNING id, name',
       [params.id]
     );
     
@@ -159,9 +179,20 @@ export async function DELETE(
        return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
     }
     
-    return NextResponse.json({ message: 'Customer deleted successfully' })
-  } catch (error) {
+    return NextResponse.json({ 
+      message: 'Customer deleted successfully',
+      deletedCustomer: result.rows[0]
+    })
+  } catch (error: any) {
     console.error('Error deleting customer:', error);
+    
+    // Handle foreign key constraint error
+    if (error.code === '23503') {
+      return NextResponse.json({ 
+        error: 'Cannot delete customer with existing related records'
+      }, { status: 400 })
+    }
+    
     return NextResponse.json({ error: 'Failed to delete customer' }, { status: 500 })
   }
 }

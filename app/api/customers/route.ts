@@ -33,6 +33,31 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { name, phone, email, address, cnic, balance } = body
     
+    // Check for duplicates by name (case-insensitive), phone, or CNIC
+    const duplicateCheck = await db.query(`
+      SELECT id, name, phone, cnic FROM customers 
+      WHERE LOWER(TRIM(name)) = LOWER(TRIM($1))
+      ${phone ? `OR phone = $2` : ''}
+      ${cnic ? `OR cnic = $3` : ''}
+    `, [name, phone || '', cnic || ''])
+    
+    if (duplicateCheck.rows.length > 0) {
+      const existing = duplicateCheck.rows[0]
+      let duplicateField = 'name'
+      if (phone && existing.phone === phone) duplicateField = 'phone'
+      if (cnic && existing.cnic === cnic) duplicateField = 'CNIC'
+      
+      return NextResponse.json({ 
+        error: `Customer with this ${duplicateField} already exists`,
+        existingCustomer: {
+          id: existing.id,
+          name: existing.name,
+          phone: existing.phone,
+          cnic: existing.cnic
+        }
+      }, { status: 409 })
+    }
+    
     const result = await db.query(
       `INSERT INTO customers (name, phone, email, address, cnic, balance)
        VALUES ($1, $2, $3, $4, $5, $6)
@@ -50,7 +75,7 @@ export async function POST(request: Request) {
     )
     
     return NextResponse.json(result.rows[0], { status: 201 })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating customer:', error);
     return NextResponse.json({ error: 'Failed to create customer' }, { status: 500 })
   }

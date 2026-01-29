@@ -109,7 +109,7 @@ export async function POST(request: Request) {
     const addedBy = payload?.name || 'System'
 
     const body = await request.json()
-    const { customerId, orderItems, notes, paymentStatus, paymentMethod, bankName, transactionNumber, handledBy } = body
+    const { customerId, orderItems, notes, paymentStatus, paymentMethod, bankName, transactionNumber, handledBy, partialAmount } = body
 
     await client.query('BEGIN');
 
@@ -161,12 +161,13 @@ export async function POST(request: Request) {
         totalProfit += itemProfit;
     }
 
-    // Calculate Paid/Remaining
+    // Calculate Paid/Remaining based on payment status
     let paidAmount = 0;
     let remainingAmount = totalAmount;
     let paidFromBalance = false;
 
     if (paymentStatus === 'Done') {
+        // Full payment
         paidAmount = totalAmount;
         remainingAmount = 0;
 
@@ -176,14 +177,34 @@ export async function POST(request: Request) {
         }
 
         // Create Payment Record
-        let paymentNotes = paidFromBalance ? 'Paid from customer balance' : 'Immediate payment for Order';
+        let paymentNotes = paidFromBalance ? 'Paid from customer balance' : 'Full payment for Order';
 
         await client.query(
             `INSERT INTO payments (customer_id, order_id, payment_date, amount, payment_method, reference_no, bank_name, notes, added_by)
              VALUES ($1, $2, CURRENT_TIMESTAMP, $3, $4, $5, $6, $7, $8)`,
             [customerId, orderId, totalAmount, paymentMethod, transactionNumber, bankName || null, paymentNotes, addedBy]
         );
+    } else if (paymentStatus === 'Partial') {
+        // Partial payment
+        const partialPaymentAmount = parseFloat(partialAmount) || 0;
+        
+        if (partialPaymentAmount <= 0 || partialPaymentAmount >= totalAmount) {
+            throw new Error('Invalid partial payment amount. Must be between 0 and total amount.');
+        }
+
+        paidAmount = partialPaymentAmount;
+        remainingAmount = totalAmount - partialPaymentAmount;
+
+        // Create Payment Record for partial payment
+        let paymentNotes = `Partial payment for Order (Rs. ${remainingAmount.toLocaleString()} remaining)`;
+
+        await client.query(
+            `INSERT INTO payments (customer_id, order_id, payment_date, amount, payment_method, reference_no, bank_name, notes, added_by)
+             VALUES ($1, $2, CURRENT_TIMESTAMP, $3, $4, $5, $6, $7, $8)`,
+            [customerId, orderId, partialPaymentAmount, paymentMethod, transactionNumber, bankName || null, paymentNotes, addedBy]
+        );
     }
+    // For 'Pending' status, paidAmount stays 0 and remainingAmount stays totalAmount
 
     // Update order totals
     await client.query(
@@ -192,12 +213,11 @@ export async function POST(request: Request) {
     );
 
     // Update customer balance
-    // Add remaining debt OR if paid from balance (store credit), add to debt
-    if (remainingAmount > 0 || paidFromBalance) {
-        const balanceToAdd = paidFromBalance ? totalAmount : remainingAmount;
+    // Add remaining debt to customer balance
+    if (remainingAmount > 0) {
         await client.query(
             `UPDATE customers SET balance = balance + $1 WHERE id = $2`,
-            [balanceToAdd, customerId]
+            [remainingAmount, customerId]
         );
     }
 
@@ -261,10 +281,26 @@ export async function POST(request: Request) {
     `, [orderId]);
 
     return NextResponse.json(finalResult.rows[0], { status: 201 })
-  } catch (error) {
+  } catch (error: any) {
     await client.query('ROLLBACK');
     console.error('Order creation error:', error);
-    return NextResponse.json({ error: 'Failed to create order' }, { status: 500 })
+    
+    // Provide more descriptive error messages
+    let errorMessage = 'Failed to create order';
+    if (error.code === '23503') {
+      // Foreign key violation
+      errorMessage = 'Invalid customer or product ID. Please check your selection.';
+    } else if (error.code === '23505') {
+      // Unique violation
+      errorMessage = 'Duplicate order number. Please try again.';
+    } else if (error.code === '23502') {
+      // Not null violation
+      errorMessage = `Missing required field: ${error.column || 'unknown'}`;
+    } else if (error.message) {
+      errorMessage = `Order creation failed: ${error.message}`;
+    }
+    
+    return NextResponse.json({ error: errorMessage, details: error.message }, { status: 500 })
   } finally {
     client.release();
   }
