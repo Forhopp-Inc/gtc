@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { format } from 'date-fns'
 
 interface Customer {
@@ -100,12 +100,43 @@ export default function OrdersPage() {
   const [isCreatingOrder, setIsCreatingOrder] = useState(false)
   const [isCreatingCustomer, setIsCreatingCustomer] = useState(false)
 
+  // Search states for dropdowns
+  const [customerSearch, setCustomerSearch] = useState('')
+  const [productSearch, setProductSearch] = useState<{ [key: number]: string }>({})
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false)
+  const [showProductDropdown, setShowProductDropdown] = useState<{ [key: number]: boolean }>({})
+
+  // Refs for click-outside handling
+  const customerDropdownRef = useRef<HTMLDivElement>(null)
+  const productDropdownRefs = useRef<{ [key: number]: HTMLDivElement | null }>({})
+
   useEffect(() => {
     fetchOrders()
     fetchCustomers()
     fetchProducts()
     fetchBankAccounts()
   }, [])
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      // Close customer dropdown
+      if (customerDropdownRef.current && !customerDropdownRef.current.contains(event.target as Node)) {
+        setShowCustomerDropdown(false)
+      }
+      // Close product dropdowns
+      Object.keys(showProductDropdown).forEach(indexStr => {
+        const index = parseInt(indexStr)
+        const ref = productDropdownRefs.current[index]
+        if (ref && !ref.contains(event.target as Node)) {
+          setShowProductDropdown(prev => ({ ...prev, [index]: false }))
+        }
+      })
+    }
+    
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showProductDropdown])
 
   const fetchBankAccounts = async () => {
     try {
@@ -341,19 +372,64 @@ export default function OrdersPage() {
                     + New Customer
                 </button>
               </div>
-              <select
-                required
-                className="input-field"
-                value={formData.customerId}
-                onChange={(e) => setFormData({ ...formData, customerId: e.target.value })}
-              >
-                <option value="">Select Customer</option>
-                {customers.map((customer) => (
-                  <option key={customer.id} value={customer.id}>
-                    {customer.name}
-                  </option>
-                ))}
-              </select>
+              <div className="relative" ref={customerDropdownRef}>
+                <input
+                  type="text"
+                  placeholder="Search customer..."
+                  className="input-field"
+                  value={customerSearch}
+                  onChange={(e) => {
+                    setCustomerSearch(e.target.value)
+                    setShowCustomerDropdown(true)
+                    if (!e.target.value) {
+                      setFormData({ ...formData, customerId: '' })
+                    }
+                  }}
+                  onFocus={() => setShowCustomerDropdown(true)}
+                />
+                {formData.customerId && (
+                  <button
+                    type="button"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    onClick={() => {
+                      setFormData({ ...formData, customerId: '' })
+                      setCustomerSearch('')
+                    }}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+                {showCustomerDropdown && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                    {customers
+                      .filter(c => c.name.toLowerCase().includes(customerSearch.toLowerCase()))
+                      .slice(0, 20)
+                      .map((customer) => (
+                        <button
+                          key={customer.id}
+                          type="button"
+                          className={`w-full text-left px-3 py-2 hover:bg-blue-50 text-sm ${
+                            formData.customerId === customer.id ? 'bg-blue-100 font-medium' : ''
+                          }`}
+                          onClick={() => {
+                            setFormData({ ...formData, customerId: customer.id })
+                            setCustomerSearch(customer.name)
+                            setShowCustomerDropdown(false)
+                          }}
+                        >
+                          {customer.name}
+                        </button>
+                      ))
+                    }
+                    {customers.filter(c => c.name.toLowerCase().includes(customerSearch.toLowerCase())).length === 0 && (
+                      <div className="px-3 py-2 text-sm text-gray-500">No customers found</div>
+                    )}
+                  </div>
+                )}
+              </div>
+              <input type="hidden" required value={formData.customerId} />
             </div>
 
             <div>
@@ -513,19 +589,72 @@ export default function OrdersPage() {
                 <div key={index} className="grid grid-cols-12 gap-2 mb-3 p-4 bg-gray-50 rounded">
                   <div className="col-span-4">
                     <label className="block text-xs font-medium text-gray-700 mb-1">Product</label>
-                    <select
-                      required
-                      className="input-field text-sm"
-                      value={item.productId}
-                      onChange={(e) => updateOrderItem(index, 'productId', e.target.value)}
-                    >
-                      <option value="">Select Product</option>
-                      {products.map((product) => (
-                        <option key={product.id} value={product.id}>
-                          {product.name} ({product.company.name})
-                        </option>
-                      ))}
-                    </select>
+                    <div className="relative" ref={el => { productDropdownRefs.current[index] = el }}>
+                      <input
+                        type="text"
+                        placeholder="Search product..."
+                        className="input-field text-sm"
+                        value={productSearch[index] || ''}
+                        onChange={(e) => {
+                          setProductSearch({ ...productSearch, [index]: e.target.value })
+                          setShowProductDropdown({ ...showProductDropdown, [index]: true })
+                          if (!e.target.value) {
+                            updateOrderItem(index, 'productId', '')
+                          }
+                        }}
+                        onFocus={() => setShowProductDropdown({ ...showProductDropdown, [index]: true })}
+                      />
+                      {item.productId && (
+                        <button
+                          type="button"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          onClick={() => {
+                            updateOrderItem(index, 'productId', '')
+                            setProductSearch({ ...productSearch, [index]: '' })
+                          }}
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      )}
+                      {showProductDropdown[index] && (
+                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                          {products
+                            .filter(p => {
+                              const searchTerm = (productSearch[index] || '').toLowerCase()
+                              return p.name.toLowerCase().includes(searchTerm) || 
+                                     p.company.name.toLowerCase().includes(searchTerm)
+                            })
+                            .slice(0, 20)
+                            .map((product) => (
+                              <button
+                                key={product.id}
+                                type="button"
+                                className={`w-full text-left px-3 py-2 hover:bg-blue-50 text-sm ${
+                                  item.productId === product.id ? 'bg-blue-100 font-medium' : ''
+                                }`}
+                                onClick={() => {
+                                  updateOrderItem(index, 'productId', product.id)
+                                  setProductSearch({ ...productSearch, [index]: `${product.name} (${product.company.name})` })
+                                  setShowProductDropdown({ ...showProductDropdown, [index]: false })
+                                }}
+                              >
+                                <div>{product.name}</div>
+                                <div className="text-xs text-gray-500">{product.company.name}</div>
+                              </button>
+                            ))
+                          }
+                          {products.filter(p => {
+                            const searchTerm = (productSearch[index] || '').toLowerCase()
+                            return p.name.toLowerCase().includes(searchTerm) || 
+                                   p.company.name.toLowerCase().includes(searchTerm)
+                          }).length === 0 && (
+                            <div className="px-3 py-2 text-sm text-gray-500">No products found</div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div className="col-span-2">
                     <label className="block text-xs font-medium text-gray-700 mb-1">Quantity</label>

@@ -34,12 +34,23 @@ export async function POST(request: Request) {
     const { name, phone, email, address, cnic, balance } = body
     
     // Check for duplicates by name (case-insensitive), phone, or CNIC
+    const conditions = ['LOWER(TRIM(name)) = LOWER(TRIM($1))']
+    const params: string[] = [name]
+    
+    if (phone && phone.trim()) {
+      params.push(phone)
+      conditions.push(`phone = $${params.length}`)
+    }
+    
+    if (cnic && cnic.trim()) {
+      params.push(cnic)
+      conditions.push(`cnic = $${params.length}`)
+    }
+    
     const duplicateCheck = await db.query(`
       SELECT id, name, phone, cnic FROM customers 
-      WHERE LOWER(TRIM(name)) = LOWER(TRIM($1))
-      ${phone ? `OR phone = $2` : ''}
-      ${cnic ? `OR cnic = $3` : ''}
-    `, [name, phone || '', cnic || ''])
+      WHERE ${conditions.join(' OR ')}
+    `, params)
     
     if (duplicateCheck.rows.length > 0) {
       const existing = duplicateCheck.rows[0]
