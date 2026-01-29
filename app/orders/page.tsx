@@ -99,6 +99,8 @@ export default function OrdersPage() {
   // Loading states to prevent double-clicks
   const [isCreatingOrder, setIsCreatingOrder] = useState(false)
   const [isCreatingCustomer, setIsCreatingCustomer] = useState(false)
+  const [isFixingPrices, setIsFixingPrices] = useState(false)
+  const [orderItemsToFix, setOrderItemsToFix] = useState(0)
 
   // Search states for dropdowns
   const [customerSearch, setCustomerSearch] = useState('')
@@ -115,6 +117,7 @@ export default function OrdersPage() {
     fetchCustomers()
     fetchProducts()
     fetchBankAccounts()
+    checkOrderItemsToFix()
   }, [])
 
   // Close dropdowns when clicking outside
@@ -145,6 +148,43 @@ export default function OrdersPage() {
       setBankAccounts(data)
     } catch (error) {
       console.error('Failed to fetch bank accounts:', error)
+    }
+  }
+
+  const checkOrderItemsToFix = async () => {
+    try {
+      const response = await fetch('/api/fix-order-prices')
+      const data = await response.json()
+      setOrderItemsToFix(data.count || 0)
+    } catch (error) {
+      console.error('Failed to check order items:', error)
+    }
+  }
+
+  const handleFixOrderPrices = async () => {
+    if (isFixingPrices) return
+    
+    if (!confirm(`This will update ${orderItemsToFix} order items with zero buying price to use the current product buying price. This action cannot be undone. Continue?`)) {
+      return
+    }
+    
+    setIsFixingPrices(true)
+    try {
+      const response = await fetch('/api/fix-order-prices', { method: 'POST' })
+      const data = await response.json()
+      
+      if (response.ok) {
+        alert(data.message)
+        setOrderItemsToFix(0)
+        fetchOrders()
+      } else {
+        alert(data.error || 'Failed to fix order prices')
+      }
+    } catch (error) {
+      console.error('Failed to fix order prices:', error)
+      alert('Failed to fix order prices')
+    } finally {
+      setIsFixingPrices(false)
     }
   }
 
@@ -301,6 +341,28 @@ export default function OrdersPage() {
           <p className="text-gray-600 mt-2">Create and track sales orders</p>
         </div>
         <div className="flex gap-2">
+          {orderItemsToFix > 0 && (
+            <button
+              onClick={handleFixOrderPrices}
+              disabled={isFixingPrices}
+              className="flex items-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-md shadow-sm transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isFixingPrices ? (
+                <>
+                  <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Fixing...
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                  Fix {orderItemsToFix} Buying Prices
+                </>
+              )}
+            </button>
+          )}
           <button
             onClick={() => setShowPrintModal(true)}
             className="flex items-center gap-1.5 bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-md shadow-sm transition-all text-sm font-medium"
