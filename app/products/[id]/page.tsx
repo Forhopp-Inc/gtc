@@ -20,6 +20,14 @@ interface Product {
     name: string
     contactInfo: string
   }
+  // Analytics fields
+  avgSellingPrice: string | number
+  avgBuyingPrice: string | number
+  totalProfit: string | number
+  totalQuantitySold: string | number
+  totalRevenue: string | number
+  totalCost: string | number
+  inventoryValue: string | number
 }
 
 export default function ProductDetailsPage() {
@@ -205,6 +213,89 @@ export default function ProductDetailsPage() {
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
                     Add Inventory
                 </button>
+            </div>
+        </div>
+
+        {/* Sales Analytics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Average Selling Price */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">Avg Selling Price</p>
+                        <p className="text-2xl font-bold text-gray-900 mt-1">
+                            PKR {parseFloat(product.avgSellingPrice?.toString() || '0').toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                            Avg Buy: PKR {parseFloat(product.avgBuyingPrice?.toString() || '0').toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        </p>
+                    </div>
+                    <div className="p-3 bg-blue-50 rounded-full">
+                        <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            {/* Inventory Value */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">Inventory Value</p>
+                        <p className="text-2xl font-bold text-gray-900 mt-1">
+                            PKR {parseFloat(product.inventoryValue?.toString() || '0').toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                            {product.stockQuantity} units × Avg Buy Price
+                        </p>
+                    </div>
+                    <div className="p-3 bg-purple-50 rounded-full">
+                        <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            {/* Profit/Loss Indicator */}
+            <div className={`rounded-xl shadow-sm border p-5 ${
+                parseFloat(product.totalProfit?.toString() || '0') >= 0 
+                    ? 'bg-green-50 border-green-100' 
+                    : 'bg-red-50 border-red-100'
+            }`}>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <p className={`text-sm font-medium uppercase tracking-wider ${
+                            parseFloat(product.totalProfit?.toString() || '0') >= 0 ? 'text-green-700' : 'text-red-700'
+                        }`}>
+                            {parseFloat(product.totalProfit?.toString() || '0') >= 0 ? 'Total Profit' : 'Total Loss'}
+                        </p>
+                        <p className={`text-2xl font-bold mt-1 ${
+                            parseFloat(product.totalProfit?.toString() || '0') >= 0 ? 'text-green-800' : 'text-red-800'
+                        }`}>
+                            PKR {Math.abs(parseFloat(product.totalProfit?.toString() || '0')).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        </p>
+                        <p className={`text-xs mt-1 ${
+                            parseFloat(product.totalProfit?.toString() || '0') >= 0 ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                            {parseFloat(product.totalQuantitySold?.toString() || '0').toLocaleString()} units sold
+                        </p>
+                    </div>
+                    <div className={`p-3 rounded-full ${
+                        parseFloat(product.totalProfit?.toString() || '0') >= 0 ? 'bg-green-100' : 'bg-red-100'
+                    }`}>
+                        {parseFloat(product.totalProfit?.toString() || '0') >= 0 ? (
+                            <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                            </svg>
+                        ) : (
+                            <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+                            </svg>
+                        )}
+                    </div>
+                </div>
             </div>
         </div>
 

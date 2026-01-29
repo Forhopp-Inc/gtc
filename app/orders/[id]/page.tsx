@@ -6,21 +6,37 @@ import Link from 'next/link'
 import { format } from 'date-fns'
 
 interface Product {
-  id: string
+  id: string | null
   name: string
-  description: string
-  category: string
+  description?: string
+  category?: string
+  company?: {
+    name: string
+  }
 }
 
 interface OrderItem {
   id: string
   product: Product
+  productName?: string
+  productCategory?: string
+  companyName?: string
   quantity: string
   buyingPrice: string
   sellingPrice: string
   totalCost: string
   totalRevenue: string
   profit: string
+}
+
+// Helper function to get product display name
+const getProductName = (item: OrderItem): string => {
+  return item.product?.name || item.productName || 'Deleted Product';
+}
+
+// Helper function to check if product was deleted
+const isProductDeleted = (item: OrderItem): boolean => {
+  return !item.product?.id;
 }
 
 interface Customer {
@@ -104,12 +120,12 @@ export default function OrderDetailsPage() {
         notes: data.notes || '',
         orderDate: data.orderDate ? new Date(data.orderDate).toISOString().slice(0, 16) : ''
       })
-      // Initialize return items
+      // Initialize return items - use helper function for product name
       setReturnItems(data.orderItems.map((item: OrderItem) => ({
         orderItemId: item.id,
         quantity: 0,
         maxQuantity: parseFloat(item.quantity),
-        productName: item.product.name,
+        productName: getProductName(item),
         sellingPrice: parseFloat(item.sellingPrice)
       })))
     } catch (error) {
@@ -365,7 +381,12 @@ export default function OrderDetailsPage() {
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {order.orderItems.map((item) => (
                                     <tr key={item.id}>
-                                        <td className="px-4 py-3 text-sm text-gray-900">{item.product.name}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-900">
+                                            {getProductName(item)}
+                                            {isProductDeleted(item) && (
+                                                <span className="ml-2 text-xs text-red-500">(Deleted)</span>
+                                            )}
+                                        </td>
                                         <td className="px-4 py-3 text-sm text-gray-900 text-right">{item.quantity}</td>
                                         <td className="px-4 py-3 text-sm text-gray-900 text-right">Rs. {parseFloat(item.sellingPrice).toLocaleString()}</td>
                                         <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">Rs. {parseFloat(item.totalRevenue).toLocaleString()}</td>

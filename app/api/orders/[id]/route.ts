@@ -42,9 +42,12 @@ export async function GET(
             'totalCost', oi.total_cost,
             'totalRevenue', oi.total_revenue,
             'profit', oi.profit,
+            'productName', oi.product_name,
+            'productCategory', oi.product_category,
+            'companyName', oi.company_name,
             'createdAt', oi.created_at,
             'updatedAt', oi.updated_at,
-            'product', json_build_object(
+            'product', CASE WHEN p.id IS NOT NULL THEN json_build_object(
                 'id', p.id,
                 'name', p.name,
                 'description', p.description,
@@ -52,7 +55,7 @@ export async function GET(
                 'companyId', p.company_id,
                 'createdAt', p.created_at,
                 'updatedAt', p.updated_at,
-                'company', json_build_object(
+                'company', CASE WHEN comp.id IS NOT NULL THEN json_build_object(
                     'id', comp.id,
                     'name', comp.name,
                     'contactInfo', comp.contact_info,
@@ -60,11 +63,16 @@ export async function GET(
                     'officerId', comp.officer_id,
                     'createdAt', comp.created_at,
                     'updatedAt', comp.updated_at
-                )
-            )
+                ) ELSE json_build_object('name', oi.company_name) END
+            ) ELSE json_build_object(
+                'id', NULL,
+                'name', COALESCE(oi.product_name, 'Deleted Product'),
+                'category', oi.product_category,
+                'company', json_build_object('name', COALESCE(oi.company_name, 'Unknown'))
+            ) END
           )) FROM order_items oi 
-          JOIN products p ON oi.product_id = p.id
-          JOIN companies comp ON p.company_id = comp.id
+          LEFT JOIN products p ON oi.product_id = p.id
+          LEFT JOIN companies comp ON p.company_id = comp.id
           WHERE oi.order_id = o.id),
           '[]'::json
         ) as "orderItems",

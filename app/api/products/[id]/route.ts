@@ -17,6 +17,15 @@ export async function GET(
         p.company_id as "companyId", 
         p.created_at as "createdAt", 
         p.updated_at as "updatedAt",
+        -- Analytics fields
+        COALESCE((SELECT AVG(oi.selling_price) FROM order_items oi WHERE oi.product_id = p.id), 0) as "avgSellingPrice",
+        COALESCE((SELECT AVG(oi.buying_price) FROM order_items oi WHERE oi.product_id = p.id), 0) as "avgBuyingPrice",
+        COALESCE((SELECT SUM(oi.profit) FROM order_items oi WHERE oi.product_id = p.id), 0) as "totalProfit",
+        COALESCE((SELECT SUM(oi.quantity) FROM order_items oi WHERE oi.product_id = p.id), 0) as "totalQuantitySold",
+        COALESCE((SELECT SUM(oi.total_revenue) FROM order_items oi WHERE oi.product_id = p.id), 0) as "totalRevenue",
+        COALESCE((SELECT SUM(oi.total_cost) FROM order_items oi WHERE oi.product_id = p.id), 0) as "totalCost",
+        -- Inventory value calculation (stock * average buying price)
+        COALESCE(p.stock_quantity * (SELECT AVG(oi.buying_price) FROM order_items oi WHERE oi.product_id = p.id), 0) as "inventoryValue",
         json_build_object(
             'id', c.id, 
             'name', c.name, 
