@@ -37,7 +37,9 @@ export default function ProductDetailsPage() {
   const [loading, setLoading] = useState(true)
   const [showInventoryModal, setShowInventoryModal] = useState(false)
   const [showEditStockModal, setShowEditStockModal] = useState(false)
+  const [showEditPriceModal, setShowEditPriceModal] = useState(false)
   const [editStockValue, setEditStockValue] = useState('')
+  const [editPriceValue, setEditPriceValue] = useState('')
   const [purchases, setPurchases] = useState<any[]>([])
   const [editingPurchase, setEditingPurchase] = useState<any>(null)
   const [showEditPurchaseModal, setShowEditPurchaseModal] = useState(false)
@@ -66,6 +68,7 @@ export default function ProductDetailsPage() {
       const data = await response.json()
       setProduct(data)
       setEditStockValue(data.stockQuantity.toString())
+      setEditPriceValue(data.price ? data.price.toString() : '0')
     } catch (error) {
       console.error('Error:', error)
     } finally {
@@ -102,6 +105,28 @@ export default function ProductDetailsPage() {
       }
     } catch (error) {
       console.error('Error updating stock:', error)
+    }
+  }
+
+  const handleUpdatePrice = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!product) return
+
+    try {
+      const response = await fetch(`/api/products/${product.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ price: parseFloat(editPriceValue) })
+      })
+
+      if (response.ok) {
+        setShowEditPriceModal(false)
+        fetchProductDetails()
+        alert('Buying price updated successfully!')
+      }
+    } catch (error) {
+      console.error('Error updating price:', error)
+      alert('Failed to update price')
     }
   }
 
@@ -309,7 +334,16 @@ export default function ProductDetailsPage() {
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-gray-500">Current Buying Price</label>
-                    <p className="mt-1 text-gray-900 font-medium">PKR {product.price ? parseFloat(product.price.toString()).toLocaleString() : '0'}</p>
+                    <div className="mt-1 flex items-center gap-2">
+                        <p className="text-gray-900 font-medium">PKR {product.price ? parseFloat(product.price.toString()).toLocaleString() : '0'}</p>
+                        <button 
+                            onClick={() => setShowEditPriceModal(true)}
+                            className="text-blue-600 hover:text-blue-800 p-1"
+                            title="Edit Buying Price"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                        </button>
+                    </div>
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-gray-500">Added On</label>
@@ -502,6 +536,59 @@ export default function ProductDetailsPage() {
                         <button
                             type="button"
                             onClick={() => setShowEditStockModal(false)}
+                            className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+      )}
+
+      {/* Edit Price Modal */}
+      {showEditPriceModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+            <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={() => setShowEditPriceModal(false)}></div>
+                <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                    <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                        <div className="sm:flex sm:items-start">
+                            <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
+                                <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">Edit Buying Price</h3>
+                                <div className="mt-6 space-y-4">
+                                    <form onSubmit={handleUpdatePrice} id="edit-price-form">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700">Current Buying Price (PKR)</label>
+                                            <input
+                                                type="number"
+                                                required
+                                                min="0"
+                                                step="0.01"
+                                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                                                value={editPriceValue}
+                                                onChange={(e) => setEditPriceValue(e.target.value)}
+                                            />
+                                            <p className="mt-2 text-xs text-gray-500">
+                                                This is the current buying price per unit. It will be used as a reference for new orders but does not affect historical order data.
+                                            </p>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                        <button
+                            type="submit"
+                            form="edit-price-form"
+                            className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
+                        >
+                            Update Price
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setShowEditPriceModal(false)}
                             className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
                         >
                             Cancel

@@ -113,6 +113,7 @@ export async function PUT(
     if (body.category !== undefined) { fields.push(`category = $${idx++}`); values.push(body.category); }
     if (body.stockQuantity !== undefined) { fields.push(`stock_quantity = $${idx++}`); values.push(body.stockQuantity); }
     if (body.companyId !== undefined) { fields.push(`company_id = $${idx++}`); values.push(body.companyId); }
+    if (body.price !== undefined) { fields.push(`price = $${idx++}`); values.push(body.price); }
 
     if (fields.length === 0) {
        return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
