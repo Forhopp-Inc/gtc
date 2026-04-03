@@ -222,25 +222,35 @@ export async function GET(request: Request) {
       // Table might not exist
     }
 
-    // 9. Summary Statistics
-    const summaryQuery = params.length > 0
-      ? `SELECT 
-          (SELECT COALESCE(SUM(total_amount), 0) FROM orders WHERE order_date >= $1 AND order_date <= $2) as "totalSales",
-          (SELECT COALESCE(SUM(paid_amount), 0) FROM orders WHERE order_date >= $1 AND order_date <= $2) as "totalCollected",
-          (SELECT COUNT(*) FROM orders WHERE order_date >= $1 AND order_date <= $2) as "orderCount",
-          (SELECT COALESCE(SUM(oi.total_cost), 0) FROM order_items oi JOIN orders o ON oi.order_id = o.id WHERE o.order_date >= $1 AND o.order_date <= $2) as "totalCost",
-          (SELECT COALESCE(SUM(oi.profit), 0) FROM order_items oi JOIN orders o ON oi.order_id = o.id WHERE o.order_date >= $1 AND o.order_date <= $2) as "grossProfit",
-          (SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE expense_date >= $1 AND expense_date <= $2) as "totalExpenses"`
-      : `SELECT 
-          (SELECT COALESCE(SUM(total_amount), 0) FROM orders) as "totalSales",
-          (SELECT COALESCE(SUM(paid_amount), 0) FROM orders) as "totalCollected",
-          (SELECT COUNT(*) FROM orders) as "orderCount",
-          (SELECT COALESCE(SUM(total_cost), 0) FROM order_items) as "totalCost",
-          (SELECT COALESCE(SUM(profit), 0) FROM order_items) as "grossProfit",
-          (SELECT COALESCE(SUM(amount), 0) FROM expenses) as "totalExpenses"`;
+    // 9. Summary Statistics - calculate from aggregated data
+    let totalSales = 0, totalCollected = 0, orderCount = 0, totalCost = 0, grossProfit = 0, totalExpenses = 0;
     
-    const summaryResult = await db.query(summaryQuery, params);
-    const summary = summaryResult.rows[0];
+    // Calculate from orders result
+    ordersResult.rows.forEach((order: any) => {
+      totalSales += parseFloat(order.totalAmount) || 0;
+      totalCollected += parseFloat(order.paidAmount) || 0;
+      orderCount++;
+    });
+    
+    // Calculate COGS and profit from product sales
+    orderItemsResult.rows.forEach((item: any) => {
+      totalCost += parseFloat(item.totalCost) || 0;
+      grossProfit += parseFloat(item.totalProfit) || 0;
+    });
+    
+    // Calculate expenses
+    expensesResult.rows.forEach((expense: any) => {
+      totalExpenses += parseFloat(expense.amount) || 0;
+    });
+    
+    const summary = {
+      totalSales,
+      totalCollected,
+      orderCount,
+      totalCost,
+      grossProfit,
+      totalExpenses
+    };
 
     // 10. Company Balances Summary
     let companyBalances: any[] = [];
@@ -291,14 +301,14 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       summary: {
-        totalSales: parseFloat(summary.totalSales),
-        totalCollected: parseFloat(summary.totalCollected),
-        totalReceivable: parseFloat(summary.totalSales) - parseFloat(summary.totalCollected),
-        orderCount: parseInt(summary.orderCount),
-        totalCost: parseFloat(summary.totalCost),
-        grossProfit: parseFloat(summary.grossProfit),
-        totalExpenses: parseFloat(summary.totalExpenses),
-        netProfit: parseFloat(summary.grossProfit) - parseFloat(summary.totalExpenses)
+        totalSales: summary.totalSales,
+        totalCollected: summary.totalCollected,
+        totalReceivable: summary.totalSales - summary.totalCollected,
+        orderCount: summary.orderCount,
+        totalCost: summary.totalCost,
+        grossProfit: summary.grossProfit,
+        totalExpenses: summary.totalExpenses,
+        netProfit: summary.grossProfit - summary.totalExpenses
       },
       orders: ordersResult.rows,
       productSales: orderItemsResult.rows,
