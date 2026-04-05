@@ -1,300 +1,213 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, subWeeks, subMonths } from 'date-fns'
+import { format, startOfMonth, endOfMonth, subMonths, startOfYear } from 'date-fns'
 
-interface ReportData {
-  summary: {
-    totalSales: number
-    totalCollected: number
-    totalReceivable: number
-    orderCount: number
-    totalCost: number
-    grossProfit: number
-    totalExpenses: number
-    netProfit: number
+interface DashboardStats {
+  counts: {
+    totalCompanies: number
+    totalProducts: number
+    totalCustomers: number
+    totalOrders: number
+    pendingOrders: number
+    completedOrders: number
   }
-  orders: Array<{
+  financial: {
+    totalCustomerDebt: number
+    totalRevenue: number
+    totalCollected: number
+    totalCost: number
+    totalExpenses: number
+    grossProfit: number
+    netProfit: number
+    inventoryValue: number
+  }
+  cashFlow: {
+    totalCashIn: number
+    totalCashOut: number
+    netCashFlow: number
+    breakdown: {
+        customerPayments: number
+        investorInvestments: number
+        expenses: number
+        investorWithdrawals: number
+        customerWithdrawals: number
+        purchasePayments: number
+    }
+  }
+  recentOrders: Array<{
     id: string
     orderNumber: string
-    orderDate: string
+    customer: { name: string }
     totalAmount: string
     paidAmount: string
     remainingAmount: string
     status: string
-    customerName: string
-    customerPhone: string
+    orderDate: string
   }>
-  productSales: Array<{
-    productName: string
-    companyName: string
-    totalQty: string
-    avgBuyPrice: string
-    avgSellPrice: string
-    totalCost: string
+  monthlyRevenue: Array<{
+    month: string
+    revenue: number
+    collected: number
+  }>
+  topProducts: Array<{
+    product: {
+      name: string
+      company: { name: string }
+    }
+    totalQuantity: string
     totalRevenue: string
     totalProfit: string
   }>
-  inventoryPurchases: Array<{
+  topCustomers: Array<{
     id: string
-    date: string
-    amount: string
-    description: string
-    invoiceNumber: string
-    status: string
-    companyName: string
+    name: string
+    phone: string
+    balance: string
+    totalPurchases: string
+    totalPaid: string
+    orderCount: string
   }>
-  companyPayments: Array<{
-    id: string
-    date: string
-    amount: string
-    prReceiptNumber: string
-    status: string
-    companyName: string
-    fromDetails: any
-  }>
-  expenses: Array<{
-    id: string
+  recentExpenses: Array<{
     category: string
     description: string
     amount: string
-    date: string
-    notes: string
+    expenseDate: string
   }>
-  expenseSummary: Array<{
+  expensesByCategory: Array<{
     category: string
-    total: string
+    totalAmount: string
     count: string
   }>
-  customerPayments: Array<{
+  lowStockProducts: Array<{
     id: string
-    date: string
-    amount: string
-    type: string
-    method: string
-    notes: string
-    customerName: string
-  }>
-  investorTransactions: Array<{
-    id: string
-    date: string
-    amount: string
-    type: string
-    description: string
-    investorName: string
-  }>
-  investorSummary: Array<{
-    investorName: string
-    investments: string
-    withdrawals: string
+    name: string
+    stockQuantity: number
+    price: string
+    companyName: string
   }>
   companyBalances: Array<{
+    id: string
     name: string
     totalPurchases: string
     totalPaid: string
     balance: string
   }>
-  customerBalances: Array<{
-    name: string
-    phone: string
-    balance: string
-    totalPurchases: string
-  }>
-  currentInventory: Array<{
-    productName: string
-    category: string
-    stock: number
-    buyPrice: string
-    value: string
-    companyName: string
-  }>
 }
 
 export default function ReportsPage() {
-  const [reportData, setReportData] = useState<ReportData | null>(null)
+  const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
-  const [reportType, setReportType] = useState<'daily' | 'weekly' | 'monthly' | 'custom'>('daily')
-  const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'))
-  const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'))
-  const [showPrintModal, setShowPrintModal] = useState(false)
+  const [activeTab, setActiveTab] = useState('overview')
+  
+  // Date Filter State
+  const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'))
+  const [endDate, setEndDate] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'))
 
   useEffect(() => {
-    handleReportTypeChange(reportType)
+    fetchStats()
   }, [])
 
-  const handleReportTypeChange = (type: 'daily' | 'weekly' | 'monthly' | 'custom') => {
-    setReportType(type)
-    const today = new Date()
-    let start: Date, end: Date
-
-    switch (type) {
-      case 'daily':
-        start = startOfDay(today)
-        end = endOfDay(today)
-        break
-      case 'weekly':
-        start = startOfWeek(today, { weekStartsOn: 1 })
-        end = endOfWeek(today, { weekStartsOn: 1 })
-        break
-      case 'monthly':
-        start = startOfMonth(today)
-        end = endOfMonth(today)
-        break
-      default:
-        return
-    }
-
-    setStartDate(format(start, 'yyyy-MM-dd'))
-    setEndDate(format(end, 'yyyy-MM-dd'))
-  }
-
-  const fetchReportData = async () => {
+  const fetchStats = async () => {
     setLoading(true)
     try {
-      const queryParams = new URLSearchParams({ startDate, endDate })
-      const response = await fetch(`/api/reports?${queryParams}`)
+      const queryParams = new URLSearchParams({
+        startDate,
+        endDate
+      })
+      const response = await fetch(`/api/dashboard/stats?${queryParams}`)
       const data = await response.json()
-      setReportData(data)
+      setStats(data)
     } catch (error) {
-      console.error('Failed to fetch report data:', error)
+      console.error('Failed to fetch stats:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => {
-    if (startDate && endDate) {
-      fetchReportData()
-    }
-  }, [startDate, endDate])
+  const handleDatePreset = (preset: string) => {
+    const today = new Date()
+    let start = new Date()
+    let end = new Date()
 
-  const getReportTitle = () => {
-    switch (reportType) {
-      case 'daily':
-        return `Daily Report - ${format(new Date(startDate), 'MMMM d, yyyy')}`
-      case 'weekly':
-        return `Weekly Report - ${format(new Date(startDate), 'MMM d')} to ${format(new Date(endDate), 'MMM d, yyyy')}`
-      case 'monthly':
-        return `Monthly Report - ${format(new Date(startDate), 'MMMM yyyy')}`
-      default:
-        return `Custom Report - ${format(new Date(startDate), 'MMM d')} to ${format(new Date(endDate), 'MMM d, yyyy')}`
+    switch (preset) {
+        case 'today':
+            start = today
+            end = today
+            break
+        case 'last7Days':
+            start = new Date(today)
+            start.setDate(today.getDate() - 7)
+            end = today
+            break
+        case 'thisMonth':
+            start = startOfMonth(today)
+            end = endOfMonth(today)
+            break
+        case 'lastMonth':
+            start = startOfMonth(subMonths(today, 1))
+            end = endOfMonth(subMonths(today, 1))
+            break
+        case 'last3Months':
+            start = subMonths(today, 3)
+            end = today
+            break
+        case 'thisYear':
+            start = startOfYear(today)
+            end = today
+            break
+        case 'allTime':
+            start = new Date(2020, 0, 1)
+            end = today
+            break
     }
+    setStartDate(format(start, 'yyyy-MM-dd'))
+    setEndDate(format(end, 'yyyy-MM-dd'))
   }
 
-  const handlePrint = () => {
-    const printContent = document.getElementById('comprehensive-report')
+  const handlePrintReport = () => {
+    const printContent = document.getElementById('report-content')
     if (printContent) {
       const printWindow = window.open('', '_blank')
       if (printWindow) {
         printWindow.document.write(`
           <html>
             <head>
-              <title>${getReportTitle()} - Ghous Trading Company</title>
+              <title>Report - ${activeTab.toUpperCase()} - ${format(new Date(startDate), 'MMM d, yyyy')} to ${format(new Date(endDate), 'MMM d, yyyy')}</title>
               <style>
-                * { margin: 0; padding: 0; box-sizing: border-box; }
-                body { 
-                  font-family: Arial, sans-serif; 
-                  margin: 15px; 
-                  font-size: 10px; 
-                  line-height: 1.4;
-                  color: #1f2937;
-                }
-                .report-header {
-                  text-align: center;
-                  border-bottom: 3px double #1f2937;
-                  padding-bottom: 12px;
-                  margin-bottom: 15px;
-                }
-                .report-header h1 { font-size: 18px; font-weight: bold; margin-bottom: 4px; }
-                .report-header h2 { font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 4px; }
-                .report-header p { font-size: 10px; color: #6b7280; }
-                
-                .summary-grid {
-                  display: grid;
-                  grid-template-columns: repeat(4, 1fr);
-                  gap: 8px;
-                  margin-bottom: 15px;
-                }
-                .summary-box {
-                  border: 1px solid #d1d5db;
-                  padding: 8px;
-                  text-align: center;
-                  background: #f9fafb;
-                }
-                .summary-box .label { font-size: 8px; color: #6b7280; text-transform: uppercase; margin-bottom: 2px; }
-                .summary-box .value { font-size: 12px; font-weight: bold; }
-                .summary-box.positive .value { color: #15803d; }
-                .summary-box.negative .value { color: #dc2626; }
-                
-                .section { margin-bottom: 15px; page-break-inside: avoid; }
-                .section-header {
-                  background: #1f2937;
-                  color: white;
-                  padding: 6px 10px;
-                  font-size: 11px;
-                  font-weight: bold;
-                  margin-bottom: 0;
-                }
-                
-                table { 
-                  width: 100%; 
-                  border-collapse: collapse; 
-                  font-size: 9px;
-                }
-                th, td { 
-                  border: 1px solid #9ca3af; 
-                  padding: 4px 6px; 
-                  text-align: left; 
-                }
-                th { 
-                  background-color: #e5e7eb; 
-                  font-weight: 600; 
-                  font-size: 8px;
-                  text-transform: uppercase;
-                }
-                tr:nth-child(even) { background-color: #f9fafb; }
-                
+                body { font-family: Arial, sans-serif; margin: 20px; font-size: 11px; }
+                table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+                th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }
+                th { background-color: #f3f4f6; font-weight: 600; }
                 .text-right { text-align: right; }
                 .text-center { text-align: center; }
                 .font-bold { font-weight: bold; }
-                .font-semibold { font-weight: 600; }
-                .text-green { color: #15803d; }
-                .text-red { color: #dc2626; }
-                .text-blue { color: #1d4ed8; }
-                .text-gray { color: #6b7280; }
-                
-                .totals-row { 
-                  background-color: #e5e7eb !important; 
-                  font-weight: bold;
-                }
-                
-                .two-column {
-                  display: grid;
-                  grid-template-columns: 1fr 1fr;
-                  gap: 15px;
-                }
-                
-                .page-break { page-break-before: always; }
-                
-                @media print {
-                  body { margin: 10px; }
-                  .section { page-break-inside: avoid; }
-                  .no-print { display: none; }
-                }
+                .text-green-600 { color: #15803d; }
+                .text-red-600 { color: #dc2626; }
+                .text-blue-600 { color: #1d4ed8; }
+                .header { border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 15px; }
+                .summary-box { display: inline-block; padding: 10px; margin: 5px; background: #f9fafb; border-radius: 5px; }
+                @media print { body { margin: 10px; } }
               </style>
             </head>
             <body>
+              <div class="header">
+                <h2 style="margin:0">Ghous Trading Company</h2>
+                <p style="margin:5px 0">Report: ${activeTab.replace('-', ' ').toUpperCase()}</p>
+                <p style="margin:5px 0;font-size:10px;">Period: ${format(new Date(startDate), 'MMM d, yyyy')} - ${format(new Date(endDate), 'MMM d, yyyy')}</p>
+                <p style="margin:5px 0;font-size:10px;">Generated: ${format(new Date(), 'MMM d, yyyy h:mm a')}</p>
+              </div>
               ${printContent.innerHTML}
             </body>
           </html>
         `)
         printWindow.document.close()
-        setTimeout(() => printWindow.print(), 250)
+        printWindow.print()
       }
     }
   }
 
-  if (loading && !reportData) {
+  if (loading && !stats) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex justify-center items-center h-64">
@@ -306,600 +219,498 @@ export default function ReportsPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header & Controls */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Business Reports</h1>
-          <p className="text-gray-600 mt-2">Generate comprehensive business reports</p>
+            <h1 className="text-3xl font-bold text-gray-900">Reports & Analytics</h1>
+            <p className="text-gray-600 mt-2">Business performance and financial insights</p>
         </div>
         
+        {/* Date Filter Controls */}
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-          <div className="flex flex-col lg:flex-row gap-4 items-end lg:items-center">
-            {/* Report Type Selector */}
-            <div className="flex gap-1">
-              {(['daily', 'weekly', 'monthly', 'custom'] as const).map((type) => (
-                <button
-                  key={type}
-                  onClick={() => handleReportTypeChange(type)}
-                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                    reportType === type
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {type.charAt(0).toUpperCase() + type.slice(1)}
-                </button>
-              ))}
+            <div className="flex flex-col lg:flex-row gap-4 items-end lg:items-center">
+                <div className="flex gap-2">
+                    <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">From</label>
+                        <input 
+                            type="date" 
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                            className="input-field text-sm py-1.5"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">To</label>
+                        <input 
+                            type="date" 
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                            className="input-field text-sm py-1.5"
+                        />
+                    </div>
+                </div>
+                <div className="flex flex-wrap gap-1">
+                    <button onClick={() => handleDatePreset('today')} className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded">Today</button>
+                    <button onClick={() => handleDatePreset('last7Days')} className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded">7 Days</button>
+                    <button onClick={() => handleDatePreset('thisMonth')} className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded">This Month</button>
+                    <button onClick={() => handleDatePreset('lastMonth')} className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded">Last Month</button>
+                    <button onClick={() => handleDatePreset('last3Months')} className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded">3 Months</button>
+                    <button onClick={() => handleDatePreset('thisYear')} className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded">This Year</button>
+                    <button onClick={() => handleDatePreset('allTime')} className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded">All Time</button>
+                </div>
+                <div className="flex gap-2">
+                    <button 
+                        onClick={fetchStats}
+                        className="btn-primary py-1.5 px-4 text-sm"
+                        disabled={loading}
+                    >
+                        {loading ? 'Loading...' : 'Apply'}
+                    </button>
+                    <button 
+                        onClick={handlePrintReport}
+                        className="flex items-center gap-1 bg-gray-800 hover:bg-gray-900 text-white py-1.5 px-4 text-sm rounded-md"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                        Print
+                    </button>
+                </div>
             </div>
-            
-            {/* Date Range */}
-            {reportType === 'custom' && (
-              <div className="flex gap-2">
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">From</label>
-                  <input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="input-field text-sm py-1.5"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">To</label>
-                  <input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="input-field text-sm py-1.5"
-                  />
-                </div>
-              </div>
-            )}
-            
-            {/* Print Button */}
-            <button
-              onClick={handlePrint}
-              className="flex items-center gap-2 bg-gray-800 hover:bg-gray-900 text-white py-2 px-4 text-sm rounded-md font-medium"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
-              </svg>
-              Print Report
-            </button>
-          </div>
         </div>
       </div>
 
+      {/* High Level Financial Metrics */}
+      {stats && (
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-8">
+          <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-blue-500">
+            <h3 className="text-xs font-medium text-gray-500 mb-1 uppercase">Revenue</h3>
+            <p className="text-xl font-bold text-gray-900">Rs. {stats.financial.totalRevenue.toLocaleString()}</p>
+            <p className="text-xs text-gray-500 mt-1">Collected: Rs. {stats.financial.totalCollected.toLocaleString()}</p>
+          </div>
+          <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-amber-500">
+            <h3 className="text-xs font-medium text-gray-500 mb-1 uppercase">Cost (COGS)</h3>
+            <p className="text-xl font-bold text-gray-900">Rs. {stats.financial.totalCost.toLocaleString()}</p>
+            <p className="text-xs text-gray-500 mt-1">Cost of sold items</p>
+          </div>
+          <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-purple-500">
+            <h3 className="text-xs font-medium text-gray-500 mb-1 uppercase">Gross Profit</h3>
+            <p className={`text-xl font-bold ${stats.financial.grossProfit >= 0 ? 'text-purple-600' : 'text-red-600'}`}>
+              Rs. {stats.financial.grossProfit.toLocaleString()}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">Revenue - COGS</p>
+          </div>
+          <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-red-500">
+            <h3 className="text-xs font-medium text-gray-500 mb-1 uppercase">Expenses</h3>
+            <p className="text-xl font-bold text-gray-900">Rs. {stats.financial.totalExpenses.toLocaleString()}</p>
+            <p className="text-xs text-gray-500 mt-1">Operating costs</p>
+          </div>
+          <div className={`bg-white p-4 rounded-lg shadow-sm border-l-4 ${stats.financial.netProfit >= 0 ? 'border-green-500' : 'border-red-600'}`}>
+            <h3 className="text-xs font-medium text-gray-500 mb-1 uppercase">Net Profit</h3>
+            <p className={`text-xl font-bold ${stats.financial.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              Rs. {stats.financial.netProfit.toLocaleString()}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">After all expenses</p>
+          </div>
+        </div>
+      )}
+
+      {/* Tabs */}
+      <div className="border-b border-gray-200 mb-6">
+        <nav className="-mb-px flex space-x-6 overflow-x-auto">
+          {['overview', 'sales', 'customers', 'expenses', 'inventory', 'cash-flow'].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`${
+                activeTab === tab
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              } whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm capitalize transition-colors`}
+            >
+              {tab.replace('-', ' ')}
+            </button>
+          ))}
+        </nav>
+      </div>
+
       {/* Report Content */}
-      {reportData && (
-        <div id="comprehensive-report">
-          {/* Report Header */}
-          <div className="report-header text-center border-b-2 border-gray-800 pb-4 mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">Ghous Trading Company</h1>
-            <h2 className="text-lg font-semibold text-gray-700 mt-1">{getReportTitle()}</h2>
-            <p className="text-sm text-gray-500 mt-1">Generated: {format(new Date(), 'MMMM d, yyyy h:mm a')}</p>
-          </div>
-
-          {/* Summary Cards */}
-          <div className="summary-grid grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="summary-box bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-              <div className="label text-xs text-blue-600 font-medium uppercase">Total Sales</div>
-              <div className="value text-xl font-bold text-blue-700">Rs. {reportData.summary.totalSales.toLocaleString()}</div>
-            </div>
-            <div className="summary-box bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-              <div className="label text-xs text-green-600 font-medium uppercase">Collected</div>
-              <div className="value text-xl font-bold text-green-700">Rs. {reportData.summary.totalCollected.toLocaleString()}</div>
-            </div>
-            <div className="summary-box bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
-              <div className="label text-xs text-amber-600 font-medium uppercase">COGS</div>
-              <div className="value text-xl font-bold text-amber-700">Rs. {reportData.summary.totalCost.toLocaleString()}</div>
-            </div>
-            <div className={`summary-box rounded-lg p-4 text-center ${reportData.summary.netProfit >= 0 ? 'bg-emerald-50 border border-emerald-200' : 'bg-red-50 border border-red-200'}`}>
-              <div className={`label text-xs font-medium uppercase ${reportData.summary.netProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>Net Profit</div>
-              <div className={`value text-xl font-bold ${reportData.summary.netProfit >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>Rs. {reportData.summary.netProfit.toLocaleString()}</div>
-            </div>
-          </div>
-
-          {/* Secondary Stats */}
-          <div className="grid grid-cols-4 gap-3 mb-6 text-sm">
-            <div className="bg-white border rounded p-3">
-              <span className="text-gray-500">Orders:</span>
-              <span className="font-bold ml-2">{reportData.summary.orderCount}</span>
-            </div>
-            <div className="bg-white border rounded p-3">
-              <span className="text-gray-500">Receivable:</span>
-              <span className="font-bold text-red-600 ml-2">Rs. {reportData.summary.totalReceivable.toLocaleString()}</span>
-            </div>
-            <div className="bg-white border rounded p-3">
-              <span className="text-gray-500">Gross Profit:</span>
-              <span className="font-bold text-purple-600 ml-2">Rs. {reportData.summary.grossProfit.toLocaleString()}</span>
-            </div>
-            <div className="bg-white border rounded p-3">
-              <span className="text-gray-500">Expenses:</span>
-              <span className="font-bold text-orange-600 ml-2">Rs. {reportData.summary.totalExpenses.toLocaleString()}</span>
-            </div>
-          </div>
-
-          {/* SECTION 1: Sales Orders */}
-          <div className="section mb-6">
-            <div className="section-header bg-gray-800 text-white px-4 py-2 font-semibold">
-              📦 Sales Orders ({reportData.orders.length})
-            </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full">
-                <thead>
-                  <tr className="bg-gray-100">
-                    <th className="border px-3 py-2 text-left text-xs font-semibold text-gray-600">Date</th>
-                    <th className="border px-3 py-2 text-left text-xs font-semibold text-gray-600">Order #</th>
-                    <th className="border px-3 py-2 text-left text-xs font-semibold text-gray-600">Customer</th>
-                    <th className="border px-3 py-2 text-right text-xs font-semibold text-gray-600">Amount</th>
-                    <th className="border px-3 py-2 text-right text-xs font-semibold text-gray-600">Paid</th>
-                    <th className="border px-3 py-2 text-right text-xs font-semibold text-gray-600">Due</th>
-                    <th className="border px-3 py-2 text-center text-xs font-semibold text-gray-600">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {reportData.orders.slice(0, 50).map((order) => (
-                    <tr key={order.id} className="hover:bg-gray-50">
-                      <td className="border px-3 py-2 text-sm">{format(new Date(order.orderDate), 'dd/MM/yy')}</td>
-                      <td className="border px-3 py-2 text-sm font-medium">{order.orderNumber}</td>
-                      <td className="border px-3 py-2 text-sm">{order.customerName}</td>
-                      <td className="border px-3 py-2 text-sm text-right font-medium">{Number(order.totalAmount).toLocaleString()}</td>
-                      <td className="border px-3 py-2 text-sm text-right text-green-600">{Number(order.paidAmount).toLocaleString()}</td>
-                      <td className="border px-3 py-2 text-sm text-right text-red-600">{Number(order.remainingAmount).toLocaleString()}</td>
-                      <td className="border px-3 py-2 text-sm text-center">
-                        <span className={`px-2 py-0.5 rounded text-xs ${order.status === 'Completed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                          {order.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                  {reportData.orders.length === 0 && (
-                    <tr><td colSpan={7} className="border px-3 py-4 text-center text-gray-500">No orders in this period</td></tr>
-                  )}
-                </tbody>
-                {reportData.orders.length > 0 && (
-                  <tfoot>
-                    <tr className="bg-gray-200 font-bold">
-                      <td colSpan={3} className="border px-3 py-2 text-sm">TOTAL</td>
-                      <td className="border px-3 py-2 text-sm text-right">{reportData.summary.totalSales.toLocaleString()}</td>
-                      <td className="border px-3 py-2 text-sm text-right text-green-700">{reportData.summary.totalCollected.toLocaleString()}</td>
-                      <td className="border px-3 py-2 text-sm text-right text-red-700">{reportData.summary.totalReceivable.toLocaleString()}</td>
-                      <td className="border px-3 py-2"></td>
-                    </tr>
-                  </tfoot>
-                )}
-              </table>
-            </div>
-          </div>
-
-          {/* SECTION 2: Product Sales Summary */}
-          <div className="section mb-6">
-            <div className="section-header bg-gray-800 text-white px-4 py-2 font-semibold">
-              📊 Product Sales Summary
-            </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full">
-                <thead>
-                  <tr className="bg-gray-100">
-                    <th className="border px-3 py-2 text-left text-xs font-semibold text-gray-600">Product</th>
-                    <th className="border px-3 py-2 text-left text-xs font-semibold text-gray-600">Company</th>
-                    <th className="border px-3 py-2 text-right text-xs font-semibold text-gray-600">Qty Sold</th>
-                    <th className="border px-3 py-2 text-right text-xs font-semibold text-gray-600">Avg Buy</th>
-                    <th className="border px-3 py-2 text-right text-xs font-semibold text-gray-600">Avg Sell</th>
-                    <th className="border px-3 py-2 text-right text-xs font-semibold text-gray-600">Revenue</th>
-                    <th className="border px-3 py-2 text-right text-xs font-semibold text-gray-600">Profit</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {reportData.productSales.map((item, idx) => (
-                    <tr key={idx} className="hover:bg-gray-50">
-                      <td className="border px-3 py-2 text-sm font-medium">{item.productName}</td>
-                      <td className="border px-3 py-2 text-sm text-gray-600">{item.companyName}</td>
-                      <td className="border px-3 py-2 text-sm text-right">{Number(item.totalQty).toLocaleString()}</td>
-                      <td className="border px-3 py-2 text-sm text-right">{Number(item.avgBuyPrice).toLocaleString(undefined, {maximumFractionDigits: 0})}</td>
-                      <td className="border px-3 py-2 text-sm text-right">{Number(item.avgSellPrice).toLocaleString(undefined, {maximumFractionDigits: 0})}</td>
-                      <td className="border px-3 py-2 text-sm text-right font-medium">{Number(item.totalRevenue).toLocaleString()}</td>
-                      <td className={`border px-3 py-2 text-sm text-right font-bold ${Number(item.totalProfit) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {Number(item.totalProfit).toLocaleString()}
-                      </td>
-                    </tr>
-                  ))}
-                  {reportData.productSales.length === 0 && (
-                    <tr><td colSpan={7} className="border px-3 py-4 text-center text-gray-500">No product sales in this period</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* SECTION 3: Inventory Purchases */}
-          <div className="section mb-6">
-            <div className="section-header bg-gray-800 text-white px-4 py-2 font-semibold">
-              🏭 Inventory Purchases ({reportData.inventoryPurchases.length})
-            </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full">
-                <thead>
-                  <tr className="bg-gray-100">
-                    <th className="border px-3 py-2 text-left text-xs font-semibold text-gray-600">Date</th>
-                    <th className="border px-3 py-2 text-left text-xs font-semibold text-gray-600">Company</th>
-                    <th className="border px-3 py-2 text-left text-xs font-semibold text-gray-600">Description</th>
-                    <th className="border px-3 py-2 text-left text-xs font-semibold text-gray-600">Invoice #</th>
-                    <th className="border px-3 py-2 text-right text-xs font-semibold text-gray-600">Amount</th>
-                    <th className="border px-3 py-2 text-center text-xs font-semibold text-gray-600">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {reportData.inventoryPurchases.map((purchase) => (
-                    <tr key={purchase.id} className="hover:bg-gray-50">
-                      <td className="border px-3 py-2 text-sm">{format(new Date(purchase.date), 'dd/MM/yy')}</td>
-                      <td className="border px-3 py-2 text-sm font-medium">{purchase.companyName}</td>
-                      <td className="border px-3 py-2 text-sm text-gray-600 max-w-xs truncate">{purchase.description}</td>
-                      <td className="border px-3 py-2 text-sm">{purchase.invoiceNumber || '-'}</td>
-                      <td className="border px-3 py-2 text-sm text-right font-medium text-red-600">{Number(purchase.amount).toLocaleString()}</td>
-                      <td className="border px-3 py-2 text-sm text-center">
-                        <span className={`px-2 py-0.5 rounded text-xs ${purchase.status === 'Completed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                          {purchase.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                  {reportData.inventoryPurchases.length === 0 && (
-                    <tr><td colSpan={6} className="border px-3 py-4 text-center text-gray-500">No inventory purchases in this period</td></tr>
-                  )}
-                </tbody>
-                {reportData.inventoryPurchases.length > 0 && (
-                  <tfoot>
-                    <tr className="bg-gray-200 font-bold">
-                      <td colSpan={4} className="border px-3 py-2 text-sm">TOTAL PURCHASES</td>
-                      <td className="border px-3 py-2 text-sm text-right text-red-700">
-                        {reportData.inventoryPurchases.reduce((sum, p) => sum + Number(p.amount), 0).toLocaleString()}
-                      </td>
-                      <td className="border px-3 py-2"></td>
-                    </tr>
-                  </tfoot>
-                )}
-              </table>
-            </div>
-          </div>
-
-          {/* SECTION 4: Expenses */}
-          <div className="section mb-6">
-            <div className="section-header bg-gray-800 text-white px-4 py-2 font-semibold">
-              💸 Expenses ({reportData.expenses.length})
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              {/* Expense Summary by Category */}
-              <div className="bg-gray-50 border rounded-lg p-4">
-                <h4 className="font-semibold text-gray-700 mb-3">By Category</h4>
-                <div className="space-y-2">
-                  {reportData.expenseSummary.map((cat, idx) => (
-                    <div key={idx} className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">{cat.category}</span>
-                      <span className="font-bold text-red-600">Rs. {Number(cat.total).toLocaleString()}</span>
-                    </div>
-                  ))}
-                  {reportData.expenseSummary.length === 0 && (
-                    <p className="text-gray-500 text-sm">No expenses</p>
-                  )}
-                </div>
-                <div className="border-t mt-3 pt-3">
-                  <div className="flex justify-between items-center font-bold">
-                    <span>Total Expenses</span>
-                    <span className="text-red-700">Rs. {reportData.summary.totalExpenses.toLocaleString()}</span>
-                  </div>
-                </div>
+      <div id="report-content">
+        {/* Overview Tab */}
+        {stats && activeTab === 'overview' && (
+          <div className="space-y-6">
+            {/* Key Metrics */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-white p-4 rounded-lg border border-gray-100 shadow-sm text-center">
+                  <p className="text-3xl font-bold text-gray-800">{stats.counts.totalCustomers}</p>
+                  <p className="text-sm text-gray-500">Active Customers</p>
               </div>
-              
-              {/* Expense Details */}
-              <div className="lg:col-span-2 overflow-x-auto">
+              <div className="bg-white p-4 rounded-lg border border-gray-100 shadow-sm text-center">
+                  <p className="text-3xl font-bold text-gray-800">{stats.counts.totalOrders}</p>
+                  <p className="text-sm text-gray-500">Orders (Period)</p>
+              </div>
+              <div className="bg-white p-4 rounded-lg border border-gray-100 shadow-sm text-center">
+                  <p className="text-3xl font-bold text-red-600">Rs. {stats.financial.totalCustomerDebt.toLocaleString()}</p>
+                  <p className="text-sm text-gray-500">Total Receivables</p>
+              </div>
+              <div className="bg-white p-4 rounded-lg border border-gray-100 shadow-sm text-center">
+                  <p className="text-3xl font-bold text-purple-600">Rs. {stats.financial.inventoryValue.toLocaleString()}</p>
+                  <p className="text-sm text-gray-500">Inventory Value</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Order Status */}
+              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                  <h3 className="text-lg font-semibold mb-4 text-gray-800">Order Status (Period)</h3>
+                  <div className="flex items-center justify-around py-4">
+                      <div className="text-center">
+                          <div className="w-20 h-20 rounded-full bg-yellow-100 flex items-center justify-center mx-auto mb-2">
+                              <span className="text-2xl font-bold text-yellow-600">{stats.counts.pendingOrders}</span>
+                          </div>
+                          <p className="text-sm font-medium text-gray-600">Pending</p>
+                      </div>
+                      <div className="h-16 w-px bg-gray-200"></div>
+                      <div className="text-center">
+                          <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-2">
+                              <span className="text-2xl font-bold text-green-600">{stats.counts.completedOrders}</span>
+                          </div>
+                          <p className="text-sm font-medium text-gray-600">Completed</p>
+                      </div>
+                  </div>
+              </div>
+
+              {/* Collection Rate */}
+              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                  <h3 className="text-lg font-semibold mb-4 text-gray-800">Collection Rate (Period)</h3>
+                  <div className="space-y-4">
+                      <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Total Sales</span>
+                          <span className="font-medium">Rs. {stats.financial.totalRevenue.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Collected</span>
+                          <span className="font-medium text-green-600">Rs. {stats.financial.totalCollected.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Pending</span>
+                          <span className="font-medium text-amber-600">Rs. {(stats.financial.totalRevenue - stats.financial.totalCollected).toLocaleString()}</span>
+                      </div>
+                      <div className="w-full bg-gray-200 h-3 rounded-full overflow-hidden">
+                          <div 
+                              className="bg-green-500 h-3 rounded-full" 
+                              style={{ width: `${stats.financial.totalRevenue > 0 ? (stats.financial.totalCollected / stats.financial.totalRevenue) * 100 : 0}%` }}
+                          ></div>
+                      </div>
+                      <p className="text-xs text-gray-500 text-center">
+                          {stats.financial.totalRevenue > 0 
+                              ? `${((stats.financial.totalCollected / stats.financial.totalRevenue) * 100).toFixed(1)}% collected`
+                              : 'No sales in this period'}
+                      </p>
+                  </div>
+              </div>
+            </div>
+
+            {/* Recent Orders */}
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+              <h3 className="text-lg font-semibold mb-4 text-gray-800">Recent Orders</h3>
+              <div className="overflow-x-auto">
+                  <table className="min-w-full">
+                      <thead className="bg-gray-50">
+                          <tr>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Order #</th>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                              <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
+                              <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
+                          </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                          {stats.recentOrders.map((order) => (
+                              <tr key={order.id} className="hover:bg-gray-50">
+                                  <td className="px-4 py-3 text-sm font-medium text-gray-900">{order.orderNumber}</td>
+                                  <td className="px-4 py-3 text-sm text-gray-600">{order.customer.name}</td>
+                                  <td className="px-4 py-3 text-sm text-gray-500">{format(new Date(order.orderDate), 'MMM dd, yyyy')}</td>
+                                  <td className="px-4 py-3 text-sm text-right font-medium">Rs. {Number(order.totalAmount).toLocaleString()}</td>
+                                  <td className="px-4 py-3 text-center">
+                                      <span className={`px-2 py-1 text-xs rounded-full ${
+                                          order.status === 'Completed' ? 'bg-green-100 text-green-800' : 
+                                          order.status === 'Cancelled' ? 'bg-red-100 text-red-800' :
+                                          'bg-yellow-100 text-yellow-800'
+                                      }`}>
+                                          {order.status}
+                                      </span>
+                                  </td>
+                              </tr>
+                          ))}
+                          {stats.recentOrders.length === 0 && (
+                              <tr><td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-500">No orders found in this period</td></tr>
+                          )}
+                      </tbody>
+                  </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Sales Tab */}
+        {stats && activeTab === 'sales' && (
+          <div className="space-y-6">
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+              <h3 className="text-lg font-semibold mb-4 text-gray-800">Top Selling Products</h3>
+              <div className="overflow-x-auto">
                 <table className="min-w-full">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th className="border px-3 py-2 text-left text-xs font-semibold text-gray-600">Date</th>
-                      <th className="border px-3 py-2 text-left text-xs font-semibold text-gray-600">Category</th>
-                      <th className="border px-3 py-2 text-left text-xs font-semibold text-gray-600">Description</th>
-                      <th className="border px-3 py-2 text-right text-xs font-semibold text-gray-600">Amount</th>
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">#</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Product Name</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Company</th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Qty Sold</th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Revenue</th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Profit</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    {reportData.expenses.slice(0, 20).map((expense) => (
-                      <tr key={expense.id} className="hover:bg-gray-50">
-                        <td className="border px-3 py-2 text-sm">{format(new Date(expense.date), 'dd/MM/yy')}</td>
-                        <td className="border px-3 py-2 text-sm">{expense.category}</td>
-                        <td className="border px-3 py-2 text-sm text-gray-600">{expense.description}</td>
-                        <td className="border px-3 py-2 text-sm text-right font-medium text-red-600">{Number(expense.amount).toLocaleString()}</td>
+                  <tbody className="divide-y divide-gray-100">
+                    {stats.topProducts.map((item, index) => (
+                      <tr key={index} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 text-sm text-gray-500">{index + 1}</td>
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.product.name}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600">{item.product.company.name}</td>
+                        <td className="px-4 py-3 text-sm text-right font-medium">{Number(item.totalQuantity).toLocaleString()}</td>
+                        <td className="px-4 py-3 text-sm text-right font-semibold">Rs. {Number(item.totalRevenue).toLocaleString()}</td>
+                        <td className="px-4 py-3 text-sm text-right font-semibold text-green-600">Rs. {Number(item.totalProfit || 0).toLocaleString()}</td>
                       </tr>
                     ))}
-                    {reportData.expenses.length === 0 && (
-                      <tr><td colSpan={4} className="border px-3 py-4 text-center text-gray-500">No expenses in this period</td></tr>
+                    {stats.topProducts.length === 0 && (
+                        <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-gray-500">No sales found in this period</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+              <h3 className="text-lg font-semibold mb-4 text-gray-800">Monthly Revenue Trend (Last 6 Months)</h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                {stats.monthlyRevenue.map((data: any) => (
+                  <div key={data.month} className="p-4 bg-gray-50 rounded border border-gray-100">
+                    <p className="font-bold text-gray-700 text-sm mb-2">{data.month}</p>
+                    <div className="space-y-1 text-xs">
+                        <div className="flex justify-between">
+                            <span className="text-gray-500">Sales</span>
+                            <span className="font-medium">Rs. {Number(data.revenue).toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-gray-500">Collected</span>
+                            <span className="font-medium text-green-600">Rs. {Number(data.collected).toLocaleString()}</span>
+                        </div>
+                    </div>
+                    <div className="w-full bg-gray-200 h-2 rounded-full mt-2 overflow-hidden">
+                        <div 
+                            className="bg-green-500 h-2 rounded-full" 
+                            style={{ width: `${Number(data.revenue) > 0 ? (Number(data.collected) / Number(data.revenue)) * 100 : 0}%` }}
+                        ></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Customers Tab */}
+        {stats && activeTab === 'customers' && (
+          <div className="space-y-6">
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+              <h3 className="text-lg font-semibold mb-4 text-gray-800">Top Customers by Purchase</h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">#</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Customer Name</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Phone</th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Orders</th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total Purchases</th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total Paid</th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Balance (Debt)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {stats.topCustomers?.map((customer, index) => (
+                      <tr key={customer.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 text-sm text-gray-500">{index + 1}</td>
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900">{customer.name}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600">{customer.phone || '-'}</td>
+                        <td className="px-4 py-3 text-sm text-right font-medium">{Number(customer.orderCount)}</td>
+                        <td className="px-4 py-3 text-sm text-right font-semibold">Rs. {Number(customer.totalPurchases).toLocaleString()}</td>
+                        <td className="px-4 py-3 text-sm text-right font-medium text-green-600">Rs. {Number(customer.totalPaid).toLocaleString()}</td>
+                        <td className="px-4 py-3 text-sm text-right font-bold text-red-600">Rs. {Number(customer.balance).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                    {(!stats.topCustomers || stats.topCustomers.length === 0) && (
+                        <tr><td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-500">No customer data found</td></tr>
                     )}
                   </tbody>
                 </table>
               </div>
             </div>
           </div>
+        )}
 
-          {/* SECTION 5: Customer Payments Received */}
-          <div className="section mb-6">
-            <div className="section-header bg-gray-800 text-white px-4 py-2 font-semibold">
-              💰 Customer Payments Received ({reportData.customerPayments.filter(p => p.type === 'credit').length})
-            </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full">
-                <thead>
-                  <tr className="bg-gray-100">
-                    <th className="border px-3 py-2 text-left text-xs font-semibold text-gray-600">Date</th>
-                    <th className="border px-3 py-2 text-left text-xs font-semibold text-gray-600">Customer</th>
-                    <th className="border px-3 py-2 text-left text-xs font-semibold text-gray-600">Method</th>
-                    <th className="border px-3 py-2 text-left text-xs font-semibold text-gray-600">Notes</th>
-                    <th className="border px-3 py-2 text-right text-xs font-semibold text-gray-600">Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {reportData.customerPayments.filter(p => p.type === 'credit').map((payment) => (
-                    <tr key={payment.id} className="hover:bg-gray-50">
-                      <td className="border px-3 py-2 text-sm">{format(new Date(payment.date), 'dd/MM/yy')}</td>
-                      <td className="border px-3 py-2 text-sm font-medium">{payment.customerName}</td>
-                      <td className="border px-3 py-2 text-sm">{payment.method || '-'}</td>
-                      <td className="border px-3 py-2 text-sm text-gray-600">{payment.notes || '-'}</td>
-                      <td className="border px-3 py-2 text-sm text-right font-medium text-green-600">{Number(payment.amount).toLocaleString()}</td>
-                    </tr>
+        {/* Expenses Tab */}
+        {stats && activeTab === 'expenses' && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                <h3 className="text-lg font-semibold mb-4 text-gray-800">Expenses by Category</h3>
+                <div className="space-y-3">
+                  {stats.expensesByCategory?.map((cat) => (
+                    <div key={cat.category} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                      <div>
+                        <p className="font-medium text-gray-800">{cat.category}</p>
+                        <p className="text-xs text-gray-500">{cat.count} transactions</p>
+                      </div>
+                      <p className="font-bold text-red-600">Rs. {Number(cat.totalAmount).toLocaleString()}</p>
+                    </div>
                   ))}
-                  {reportData.customerPayments.filter(p => p.type === 'credit').length === 0 && (
-                    <tr><td colSpan={5} className="border px-3 py-4 text-center text-gray-500">No customer payments in this period</td></tr>
+                  {(!stats.expensesByCategory || stats.expensesByCategory.length === 0) && (
+                    <p className="text-center text-gray-500 py-4">No expenses in this period</p>
                   )}
-                </tbody>
-                {reportData.customerPayments.filter(p => p.type === 'credit').length > 0 && (
-                  <tfoot>
-                    <tr className="bg-gray-200 font-bold">
-                      <td colSpan={4} className="border px-3 py-2 text-sm">TOTAL RECEIVED</td>
-                      <td className="border px-3 py-2 text-sm text-right text-green-700">
-                        {reportData.customerPayments.filter(p => p.type === 'credit').reduce((sum, p) => sum + Number(p.amount), 0).toLocaleString()}
-                      </td>
-                    </tr>
-                  </tfoot>
-                )}
-              </table>
+                </div>
+              </div>
+
+              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                <h3 className="text-lg font-semibold mb-4 text-gray-800">Recent Expenses</h3>
+                <div className="space-y-2 max-h-80 overflow-y-auto">
+                  {stats.recentExpenses?.map((exp, index) => (
+                    <div key={index} className="flex justify-between items-center p-2 border-b border-gray-100">
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{exp.description}</p>
+                        <p className="text-xs text-gray-500">{exp.category} • {format(new Date(exp.expenseDate), 'MMM dd')}</p>
+                      </div>
+                      <p className="font-semibold text-red-600">Rs. {Number(exp.amount).toLocaleString()}</p>
+                    </div>
+                  ))}
+                  {(!stats.recentExpenses || stats.recentExpenses.length === 0) && (
+                    <p className="text-center text-gray-500 py-4">No expenses in this period</p>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
+        )}
 
-          {/* SECTION 6: Investor Transactions */}
-          {reportData.investorTransactions.length > 0 && (
-            <div className="section mb-6">
-              <div className="section-header bg-gray-800 text-white px-4 py-2 font-semibold">
-                🏦 Investor Transactions ({reportData.investorTransactions.length})
-              </div>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                {/* Investor Summary */}
-                <div className="bg-gray-50 border rounded-lg p-4">
-                  <h4 className="font-semibold text-gray-700 mb-3">By Investor</h4>
-                  <div className="space-y-2">
-                    {reportData.investorSummary.map((inv, idx) => (
-                      <div key={idx} className="border-b pb-2">
-                        <div className="font-medium text-gray-800">{inv.investorName}</div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-green-600">+{Number(inv.investments).toLocaleString()}</span>
-                          <span className="text-red-600">-{Number(inv.withdrawals).toLocaleString()}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                
-                {/* Transaction Details */}
-                <div className="lg:col-span-2 overflow-x-auto">
+        {/* Inventory Tab */}
+        {stats && activeTab === 'inventory' && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                <h3 className="text-lg font-semibold mb-4 text-red-600">⚠️ Low Stock Alert</h3>
+                <div className="overflow-x-auto">
                   <table className="min-w-full">
-                    <thead>
-                      <tr className="bg-gray-100">
-                        <th className="border px-3 py-2 text-left text-xs font-semibold text-gray-600">Date</th>
-                        <th className="border px-3 py-2 text-left text-xs font-semibold text-gray-600">Investor</th>
-                        <th className="border px-3 py-2 text-left text-xs font-semibold text-gray-600">Type</th>
-                        <th className="border px-3 py-2 text-left text-xs font-semibold text-gray-600">Description</th>
-                        <th className="border px-3 py-2 text-right text-xs font-semibold text-gray-600">Amount</th>
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Company</th>
+                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Stock</th>
                       </tr>
                     </thead>
-                    <tbody>
-                      {reportData.investorTransactions.map((tx) => (
-                        <tr key={tx.id} className="hover:bg-gray-50">
-                          <td className="border px-3 py-2 text-sm">{format(new Date(tx.date), 'dd/MM/yy')}</td>
-                          <td className="border px-3 py-2 text-sm font-medium">{tx.investorName}</td>
-                          <td className="border px-3 py-2 text-sm">
-                            <span className={`px-2 py-0.5 rounded text-xs ${tx.type === 'Investment' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                              {tx.type}
-                            </span>
-                          </td>
-                          <td className="border px-3 py-2 text-sm text-gray-600">{tx.description || '-'}</td>
-                          <td className={`border px-3 py-2 text-sm text-right font-medium ${tx.type === 'Investment' ? 'text-green-600' : 'text-red-600'}`}>
-                            {tx.type === 'Investment' ? '+' : '-'}{Number(tx.amount).toLocaleString()}
-                          </td>
+                    <tbody className="divide-y divide-gray-100">
+                      {stats.lowStockProducts?.map((product) => (
+                        <tr key={product.id}>
+                          <td className="px-3 py-2 text-sm font-medium text-gray-900">{product.name}</td>
+                          <td className="px-3 py-2 text-sm text-gray-600">{product.companyName}</td>
+                          <td className="px-3 py-2 text-sm text-right font-bold text-red-600">{product.stockQuantity}</td>
                         </tr>
                       ))}
+                      {(!stats.lowStockProducts || stats.lowStockProducts.length === 0) && (
+                        <tr><td colSpan={3} className="px-3 py-4 text-center text-sm text-gray-500">All products have adequate stock</td></tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
               </div>
-            </div>
-          )}
 
-          {/* SECTION 7: Company/Supplier Payments */}
-          {reportData.companyPayments.length > 0 && (
-            <div className="section mb-6">
-              <div className="section-header bg-gray-800 text-white px-4 py-2 font-semibold">
-                🏢 Supplier Payments Made ({reportData.companyPayments.length})
-              </div>
-              <div className="overflow-x-auto">
-                <table className="min-w-full">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th className="border px-3 py-2 text-left text-xs font-semibold text-gray-600">Date</th>
-                      <th className="border px-3 py-2 text-left text-xs font-semibold text-gray-600">Company</th>
-                      <th className="border px-3 py-2 text-left text-xs font-semibold text-gray-600">PR Receipt</th>
-                      <th className="border px-3 py-2 text-center text-xs font-semibold text-gray-600">Status</th>
-                      <th className="border px-3 py-2 text-right text-xs font-semibold text-gray-600">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {reportData.companyPayments.map((payment) => (
-                      <tr key={payment.id} className="hover:bg-gray-50">
-                        <td className="border px-3 py-2 text-sm">{format(new Date(payment.date), 'dd/MM/yy')}</td>
-                        <td className="border px-3 py-2 text-sm font-medium">{payment.companyName}</td>
-                        <td className="border px-3 py-2 text-sm">{payment.prReceiptNumber || '-'}</td>
-                        <td className="border px-3 py-2 text-sm text-center">
-                          <span className={`px-2 py-0.5 rounded text-xs ${payment.status === 'Completed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                            {payment.status}
-                          </span>
-                        </td>
-                        <td className="border px-3 py-2 text-sm text-right font-medium text-blue-600">{Number(payment.amount).toLocaleString()}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr className="bg-gray-200 font-bold">
-                      <td colSpan={4} className="border px-3 py-2 text-sm">TOTAL PAID TO SUPPLIERS</td>
-                      <td className="border px-3 py-2 text-sm text-right text-blue-700">
-                        {reportData.companyPayments.reduce((sum, p) => sum + Number(p.amount), 0).toLocaleString()}
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* SECTION 8: Outstanding Balances */}
-          <div className="section mb-6">
-            <div className="section-header bg-gray-800 text-white px-4 py-2 font-semibold">
-              📋 Outstanding Balances
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
-              {/* Customer Receivables */}
-              <div>
-                <h4 className="font-semibold text-gray-700 mb-2">Customer Receivables (Top 20)</h4>
-                <table className="min-w-full">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th className="border px-3 py-2 text-left text-xs font-semibold text-gray-600">Customer</th>
-                      <th className="border px-3 py-2 text-right text-xs font-semibold text-gray-600">Balance Due</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {reportData.customerBalances.slice(0, 20).map((customer, idx) => (
-                      <tr key={idx} className="hover:bg-gray-50">
-                        <td className="border px-3 py-2 text-sm">{customer.name}</td>
-                        <td className="border px-3 py-2 text-sm text-right font-medium text-red-600">{Number(customer.balance).toLocaleString()}</td>
-                      </tr>
-                    ))}
-                    {reportData.customerBalances.length === 0 && (
-                      <tr><td colSpan={2} className="border px-3 py-4 text-center text-gray-500">No outstanding balances</td></tr>
-                    )}
-                  </tbody>
-                  {reportData.customerBalances.length > 0 && (
-                    <tfoot>
-                      <tr className="bg-gray-200 font-bold">
-                        <td className="border px-3 py-2 text-sm">TOTAL RECEIVABLE</td>
-                        <td className="border px-3 py-2 text-sm text-right text-red-700">
-                          {reportData.customerBalances.reduce((sum, c) => sum + Number(c.balance), 0).toLocaleString()}
-                        </td>
-                      </tr>
-                    </tfoot>
-                  )}
-                </table>
-              </div>
-              
-              {/* Supplier Payables */}
-              <div>
-                <h4 className="font-semibold text-gray-700 mb-2">Supplier Balances</h4>
-                <table className="min-w-full">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th className="border px-3 py-2 text-left text-xs font-semibold text-gray-600">Company</th>
-                      <th className="border px-3 py-2 text-right text-xs font-semibold text-gray-600">Purchased</th>
-                      <th className="border px-3 py-2 text-right text-xs font-semibold text-gray-600">Paid</th>
-                      <th className="border px-3 py-2 text-right text-xs font-semibold text-gray-600">Balance</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {reportData.companyBalances.filter(c => Number(c.totalPurchases) > 0).map((company, idx) => (
-                      <tr key={idx} className="hover:bg-gray-50">
-                        <td className="border px-3 py-2 text-sm">{company.name}</td>
-                        <td className="border px-3 py-2 text-sm text-right">{Number(company.totalPurchases).toLocaleString()}</td>
-                        <td className="border px-3 py-2 text-sm text-right text-green-600">{Number(company.totalPaid).toLocaleString()}</td>
-                        <td className={`border px-3 py-2 text-sm text-right font-medium ${Number(company.balance) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {Number(company.balance).toLocaleString()}
-                        </td>
-                      </tr>
-                    ))}
-                    {reportData.companyBalances.filter(c => Number(c.totalPurchases) > 0).length === 0 && (
-                      <tr><td colSpan={4} className="border px-3 py-4 text-center text-gray-500">No supplier transactions</td></tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          {/* SECTION 9: Current Inventory */}
-          <div className="section mb-6">
-            <div className="section-header bg-gray-800 text-white px-4 py-2 font-semibold">
-              📦 Current Inventory ({reportData.currentInventory.length} products)
-            </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full">
-                <thead>
-                  <tr className="bg-gray-100">
-                    <th className="border px-3 py-2 text-left text-xs font-semibold text-gray-600">Product</th>
-                    <th className="border px-3 py-2 text-left text-xs font-semibold text-gray-600">Company</th>
-                    <th className="border px-3 py-2 text-left text-xs font-semibold text-gray-600">Category</th>
-                    <th className="border px-3 py-2 text-right text-xs font-semibold text-gray-600">Stock</th>
-                    <th className="border px-3 py-2 text-right text-xs font-semibold text-gray-600">Buy Price</th>
-                    <th className="border px-3 py-2 text-right text-xs font-semibold text-gray-600">Value</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {reportData.currentInventory.map((item, idx) => (
-                    <tr key={idx} className="hover:bg-gray-50">
-                      <td className="border px-3 py-2 text-sm font-medium">{item.productName}</td>
-                      <td className="border px-3 py-2 text-sm text-gray-600">{item.companyName}</td>
-                      <td className="border px-3 py-2 text-sm">
-                        <span className={`px-2 py-0.5 rounded text-xs ${item.category === 'Pesticide' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
-                          {item.category}
-                        </span>
-                      </td>
-                      <td className="border px-3 py-2 text-sm text-right">{item.stock}</td>
-                      <td className="border px-3 py-2 text-sm text-right">{Number(item.buyPrice || 0).toLocaleString()}</td>
-                      <td className="border px-3 py-2 text-sm text-right font-medium text-purple-600">{Number(item.value || 0).toLocaleString()}</td>
-                    </tr>
+              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                <h3 className="text-lg font-semibold mb-4 text-gray-800">Supplier Balances</h3>
+                <div className="space-y-2">
+                  {stats.companyBalances?.map((company) => (
+                    <div key={company.id} className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                      <div>
+                        <p className="font-medium text-gray-800">{company.name}</p>
+                        <p className="text-xs text-gray-500">
+                          Purchased: Rs. {Number(company.totalPurchases).toLocaleString()} | Paid: Rs. {Number(company.totalPaid).toLocaleString()}
+                        </p>
+                      </div>
+                      <p className={`font-bold ${Number(company.balance) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        Rs. {Number(company.balance).toLocaleString()}
+                      </p>
+                    </div>
                   ))}
-                  {reportData.currentInventory.length === 0 && (
-                    <tr><td colSpan={6} className="border px-3 py-4 text-center text-gray-500">No inventory</td></tr>
+                  {(!stats.companyBalances || stats.companyBalances.length === 0) && (
+                    <p className="text-center text-gray-500 py-4">No outstanding balances</p>
                   )}
-                </tbody>
-                {reportData.currentInventory.length > 0 && (
-                  <tfoot>
-                    <tr className="bg-gray-200 font-bold">
-                      <td colSpan={3} className="border px-3 py-2 text-sm">TOTAL INVENTORY VALUE</td>
-                      <td className="border px-3 py-2 text-sm text-right">
-                        {reportData.currentInventory.reduce((sum, i) => sum + i.stock, 0).toLocaleString()} units
-                      </td>
-                      <td className="border px-3 py-2"></td>
-                      <td className="border px-3 py-2 text-sm text-right text-purple-700">
-                        {reportData.currentInventory.reduce((sum, i) => sum + Number(i.value || 0), 0).toLocaleString()}
-                      </td>
-                    </tr>
-                  </tfoot>
-                )}
-              </table>
+                </div>
+              </div>
             </div>
           </div>
+        )}
 
-          {/* Report Footer */}
-          <div className="border-t-2 border-gray-800 pt-4 mt-6 text-center text-sm text-gray-500">
-            <p>End of Report | Ghous Trading Company | Generated on {format(new Date(), 'MMMM d, yyyy h:mm a')}</p>
+        {/* Cash Flow Tab */}
+        {stats && activeTab === 'cash-flow' && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-green-50 p-6 rounded-lg border border-green-200">
+                <h3 className="text-sm font-medium text-green-800 uppercase mb-2">Cash Inflow</h3>
+                <p className="text-3xl font-bold text-green-600">Rs. {stats.cashFlow.totalCashIn.toLocaleString()}</p>
+                <div className="mt-4 space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-green-700">Customer Payments</span>
+                    <span className="font-medium">Rs. {stats.cashFlow.breakdown.customerPayments.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-green-700">Investor Investments</span>
+                    <span className="font-medium">Rs. {stats.cashFlow.breakdown.investorInvestments.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-red-50 p-6 rounded-lg border border-red-200">
+                <h3 className="text-sm font-medium text-red-800 uppercase mb-2">Cash Outflow</h3>
+                <p className="text-3xl font-bold text-red-600">Rs. {stats.cashFlow.totalCashOut.toLocaleString()}</p>
+                <div className="mt-4 space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-red-700">Expenses</span>
+                    <span className="font-medium">Rs. {stats.cashFlow.breakdown.expenses.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-red-700">Customer Withdrawals</span>
+                    <span className="font-medium">Rs. {stats.cashFlow.breakdown.customerWithdrawals.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-red-700">Investor Withdrawals</span>
+                    <span className="font-medium">Rs. {stats.cashFlow.breakdown.investorWithdrawals.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-red-700">Supplier Payments</span>
+                    <span className="font-medium">Rs. {stats.cashFlow.breakdown.purchasePayments.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className={`${stats.cashFlow.netCashFlow >= 0 ? 'bg-blue-50 border-blue-200' : 'bg-amber-50 border-amber-200'} p-6 rounded-lg border`}>
+                <h3 className={`text-sm font-medium ${stats.cashFlow.netCashFlow >= 0 ? 'text-blue-800' : 'text-amber-800'} uppercase mb-2`}>Net Cash Flow</h3>
+                <p className={`text-3xl font-bold ${stats.cashFlow.netCashFlow >= 0 ? 'text-blue-600' : 'text-amber-600'}`}>
+                  Rs. {stats.cashFlow.netCashFlow.toLocaleString()}
+                </p>
+                <p className="mt-4 text-sm text-gray-600">
+                  {stats.cashFlow.netCashFlow >= 0 
+                    ? 'Positive cash flow indicates healthy operations'
+                    : 'Negative cash flow - more money going out than coming in'}
+                </p>
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }
